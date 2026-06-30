@@ -1,0 +1,96 @@
+<svg width="1280" height="560" viewBox="0 0 1280 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07100B"/>
+      <stop offset="0.45" stop-color="#101914"/>
+      <stop offset="1" stop-color="#1A241D"/>
+    </linearGradient>
+    <linearGradient id="touchbar" x1="138" y1="212" x2="1142" y2="212" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#090B0A"/>
+      <stop offset="0.52" stop-color="#171A16"/>
+      <stop offset="1" stop-color="#2A2F28"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="0" y2="11" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E8FFB2"/>
+      <stop offset="1" stop-color="#BFFF45"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="1280" height="560" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="30" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.75 0 0 0 0 1 0 0 0 0 0.32 0 0 0 0.55 0"/>
+      <feBlend in2="SourceGraphic" mode="screen"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="560" rx="44" fill="url(#bg)"/>
+  <circle cx="1042" cy="86" r="180" fill="#BFFF45" opacity="0.07"/>
+  <circle cx="194" cy="474" r="220" fill="#84FFB0" opacity="0.055"/>
+
+  <text x="640" y="86" text-anchor="middle" fill="#F5F6F1" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="44" font-weight="750">Codex Touch Bar Usage</text>
+  <text x="640" y="126" text-anchor="middle" fill="#BFC8BE" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20">Native macOS helper · quota balance · token usage · Codex only</text>
+
+  <g filter="url(#shadow)">
+    <rect x="90" y="178" width="1100" height="144" rx="26" fill="#0A0D0B"/>
+    <rect x="118" y="204" width="1044" height="76" rx="18" fill="url(#touchbar)" stroke="#3A433A"/>
+    <rect x="118" y="204" width="1044" height="34" rx="17" fill="white" opacity="0.035"/>
+
+    <text x="150" y="253" fill="#F6F7F3" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="27" font-style="italic" font-weight="800">Codex</text>
+
+    <text x="276" y="235" fill="#F7F8F2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="22" font-weight="750">5小时</text>
+    <text x="276" y="264" fill="#F7F8F2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="22" font-weight="750">1周</text>
+
+    <g transform="translate(394 222)" filter="url(#softGlow)">
+      <g>
+        <rect x="0" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="39" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="78" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="117" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="156" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="195" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="234" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="273" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="312" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="351" y="0" width="30" height="11" rx="5.5" fill="#2A3328"/>
+      </g>
+      <g transform="translate(0 29)">
+        <rect x="0" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="39" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="78" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="117" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="156" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="195" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
+        <rect x="234" y="0" width="30" height="11" rx="5.5" fill="#2A3328"/>
+        <rect x="273" y="0" width="30" height="11" rx="5.5" fill="#2A3328"/>
+        <rect x="312" y="0" width="30" height="11" rx="5.5" fill="#2A3328"/>
+        <rect x="351" y="0" width="30" height="11" rx="5.5" fill="#2A3328"/>
+      </g>
+    </g>
+
+    <text x="826" y="235" text-anchor="end" fill="#F6F7F3" font-family="SFMono-Regular,Menlo,monospace" font-size="22" font-weight="700">99%</text>
+    <text x="826" y="264" text-anchor="end" fill="#F6F7F3" font-family="SFMono-Regular,Menlo,monospace" font-size="22" font-weight="700">61%</text>
+
+    <text x="875" y="235" fill="#D7DDD4" font-family="SFMono-Regular,Menlo,monospace" font-size="19">06/30 15:58</text>
+    <text x="875" y="264" fill="#D7DDD4" font-family="SFMono-Regular,Menlo,monospace" font-size="19">07/06 09:29</text>
+
+    <text x="1030" y="235" fill="#F6F7F3" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20" font-weight="750">昨日 2.5亿</text>
+    <text x="1030" y="264" fill="#F6F7F3" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20" font-weight="750">累计 75亿</text>
+  </g>
+
+  <g transform="translate(226 390)">
+    <rect x="0" y="0" width="230" height="54" rx="27" fill="#151E17" stroke="#2E3B30"/>
+    <circle cx="33" cy="27" r="11" fill="#BFFF45"/>
+    <text x="58" y="35" fill="#E9EFE6" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="650">Codex 前台显示</text>
+  </g>
+  <g transform="translate(502 390)">
+    <rect x="0" y="0" width="250" height="54" rx="27" fill="#151E17" stroke="#2E3B30"/>
+    <circle cx="33" cy="27" r="11" fill="#BFFF45"/>
+    <text x="58" y="35" fill="#E9EFE6" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="650">3 秒本地快刷</text>
+  </g>
+  <g transform="translate(798 390)">
+    <rect x="0" y="0" width="256" height="54" rx="27" fill="#151E17" stroke="#2E3B30"/>
+    <circle cx="33" cy="27" r="11" fill="#BFFF45"/>
+    <text x="58" y="35" fill="#E9EFE6" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="650">后台接近零刷新</text>
+  </g>
+</svg>

@@ -1,0 +1,126 @@
+import Foundation
+
+public struct LimitWindow: Codable, Equatable {
+    public var name: String
+    public var usedPercent: Double?
+    public var windowMinutes: Int?
+    public var resetsAt: Int?
+
+    public init(name: String, usedPercent: Double?, windowMinutes: Int?, resetsAt: Int?) {
+        self.name = name
+        self.usedPercent = usedPercent
+        self.windowMinutes = windowMinutes
+        self.resetsAt = resetsAt
+    }
+}
+
+public struct UsageSnapshot: Codable, Equatable {
+    public var primary: LimitWindow?
+    public var secondary: LimitWindow?
+    public var contextWindow: Int?
+    public var totalTokens: Int?
+    public var lastTokens: Int?
+    public var yesterdayTokens: Int?
+    public var cumulativeTokens: Int?
+    public var inputTokens: Int?
+    public var outputTokens: Int?
+    public var planType: String?
+    public var source: String
+    public var fetchedAt: Int
+    public var error: String?
+
+    public init(
+        primary: LimitWindow?,
+        secondary: LimitWindow?,
+        contextWindow: Int?,
+        totalTokens: Int?,
+        lastTokens: Int?,
+        yesterdayTokens: Int?,
+        cumulativeTokens: Int?,
+        inputTokens: Int?,
+        outputTokens: Int?,
+        planType: String?,
+        source: String,
+        fetchedAt: Int,
+        error: String? = nil
+    ) {
+        self.primary = primary
+        self.secondary = secondary
+        self.contextWindow = contextWindow
+        self.totalTokens = totalTokens
+        self.lastTokens = lastTokens
+        self.yesterdayTokens = yesterdayTokens
+        self.cumulativeTokens = cumulativeTokens
+        self.inputTokens = inputTokens
+        self.outputTokens = outputTokens
+        self.planType = planType
+        self.source = source
+        self.fetchedAt = fetchedAt
+        self.error = error
+    }
+
+    public static var placeholder: UsageSnapshot {
+        UsageSnapshot(
+            primary: LimitWindow(name: "primary", usedPercent: nil, windowMinutes: 300, resetsAt: nil),
+            secondary: LimitWindow(name: "secondary", usedPercent: nil, windowMinutes: 10080, resetsAt: nil),
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            planType: nil,
+            source: "placeholder",
+            fetchedAt: Int(Date().timeIntervalSince1970)
+        )
+    }
+}
+
+public struct TokenStats: Codable, Equatable {
+    public var yesterdayTokens: Int
+    public var cumulativeTokens: Int
+    public var yesterdayDate: String
+
+    public init(yesterdayTokens: Int, cumulativeTokens: Int, yesterdayDate: String) {
+        self.yesterdayTokens = yesterdayTokens
+        self.cumulativeTokens = cumulativeTokens
+        self.yesterdayDate = yesterdayDate
+    }
+}
+
+public struct UsageStoreConfiguration {
+    public var codexHome: URL
+    public var endpoint: URL
+    public var cacheFile: URL
+    public var tokenStatsCacheFile: URL
+    public var requestTimeout: TimeInterval
+    public var cacheTTL: TimeInterval
+
+    public init(
+        codexHome: URL = UsageStoreConfiguration.defaultCodexHome(),
+        endpoint: URL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!,
+        cacheFile: URL? = nil,
+        tokenStatsCacheFile: URL? = nil,
+        requestTimeout: TimeInterval = 4,
+        cacheTTL: TimeInterval = 20
+    ) {
+        self.codexHome = codexHome
+        self.endpoint = endpoint
+        self.cacheFile = cacheFile ?? codexHome.appendingPathComponent("touchbar-usage/usage-cache.json")
+        self.tokenStatsCacheFile = tokenStatsCacheFile ?? codexHome.appendingPathComponent("touchbar-usage/token-stats-cache.json")
+        self.requestTimeout = requestTimeout
+        self.cacheTTL = cacheTTL
+    }
+
+    public var authFile: URL {
+        codexHome.appendingPathComponent("auth.json")
+    }
+
+    public static func defaultCodexHome() -> URL {
+        if let value = ProcessInfo.processInfo.environment["CODEX_HOME"], !value.isEmpty {
+            return URL(fileURLWithPath: NSString(string: value).expandingTildeInPath)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex")
+    }
+}
