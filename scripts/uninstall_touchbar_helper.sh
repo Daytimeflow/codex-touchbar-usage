@@ -17,4 +17,4 @@ if [[ -d "${APP_DIR}" ]]; then
   echo "Removed ${APP_DIR}"
 fi
 
-echo "CodexTouchBarHelper uninstalled. MTMR backups, if any, remain in ~/.codex/touchbar-usage/."
+echo "CodexTouchBarHelper uninstalled."

@@ -2,7 +2,10 @@
   <img src="assets/logo.svg" width="112" alt="Codex Touch Bar Usage logo">
   <h1>Codex Touch Bar Usage</h1>
   <p>
-    把 Codex 额度余额、重置时间、昨日/累计 token 用量放到 MacBook Pro Touch Bar 上。
+    专为 Codex 打造的 MacBook Pro Touch Bar 用量插件。
+  </p>
+  <p>
+    一眼看到 Codex 额度余额、重置时间、昨日 token、累计 token。
   </p>
 </div>
 
@@ -11,7 +14,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-111?style=flat-square)](LICENSE)
 [![macOS](https://img.shields.io/badge/macOS-Touch%20Bar-111?style=flat-square&logo=apple)](#系统要求)
 [![Swift](https://img.shields.io/badge/Swift-native%20AppKit-F05138?style=flat-square&logo=swift&logoColor=white)](helper/CodexTouchBarHelper)
-[![Codex](https://img.shields.io/badge/Codex-usage%20helper-8DFF55?style=flat-square)](#功能)
+[![Codex](https://img.shields.io/badge/Codex-Touch%20Bar%20Plugin-8DFF55?style=flat-square)](#功能)
+[![Usage](https://img.shields.io/badge/usage-quota%20%2B%20tokens-111?style=flat-square)](#数据来源)
 
 </div>
 
@@ -19,9 +23,11 @@
 
 ## 概述
 
-**Codex Touch Bar Usage** 是一个轻量的原生 macOS 后台 helper。它会在 Codex 成为前台 App 时，临时接管 Touch Bar 展示一条紧凑的用量面板；切走到其他 App 后自动隐藏，系统亮度、音量等控制条会恢复。
+**Codex Touch Bar Usage** 是一个面向 Codex heavy user 的 Touch Bar 插件：把最容易焦虑的 Codex 用量信息直接放到键盘上方。
 
-它不是 MTMR 配置，也不依赖 Electron/WebView。核心 UI 是一个 AppKit 自绘 `NSTouchBar` custom view，布局稳定、刷新轻、响应快。
+当 Codex 成为前台 App 时，它会临时接管 Touch Bar 展示一条紧凑的用量面板；切走到其他 App 后自动隐藏，系统亮度、音量等控制条会恢复。
+
+它不是 Electron/WebView，也不是简单拼接多个 Touch Bar item。核心 UI 是一个 AppKit 自绘 `NSTouchBar` custom view，布局稳定、刷新轻、响应快。
 
 ## 功能
 
@@ -33,6 +39,15 @@
 | token 用量 | 昨日 token、累计 token，按 `万` / `亿` 格式显示 |
 | 前台感知 | 只在 Codex 聚焦时显示，切走后隐藏 |
 | 轻量刷新 | 本地 token 约 3 秒刷新；远程额度约 30 秒刷新；隐藏时停止刷新 |
+
+## 适合谁
+
+- 每天长时间使用 Codex / Codex CLI / Codex Desktop 的用户；
+- 想随时知道 5 小时额度和 1 周额度还剩多少的人；
+- 想看昨日和累计 token 消耗，但不想频繁打开个人资料页的人；
+- 还在用带 Touch Bar 的 MacBook Pro，想让这条屏幕重新有点存在感的人。
+
+关键词：`Codex Touch Bar`、`Codex 用量`、`Codex token 统计`、`Codex quota`、`MacBook Pro Touch Bar plugin`。
 
 ## 系统要求
 
@@ -105,18 +120,6 @@ git pull
 
 不会删除你的 Codex 登录信息，也不会删除 `~/.codex`。
 
-## MTMR 迁移
-
-本项目不依赖 MTMR。公开版安装脚本默认不会删除 MTMR。
-
-如果你确认要迁移并清理 MTMR，可显式运行：
-
-```bash
-REMOVE_MTMR=1 ./scripts/install_touchbar_helper.sh
-```
-
-脚本会先备份 MTMR 配置到 `~/.codex/touchbar-usage/mtmr-backup-*`，再尝试退出并移除 MTMR。
-
 ## 数据来源
 
 | 数据 | 来源 |
@@ -162,6 +165,10 @@ tail -f ~/.codex/touchbar-usage/helper.out.log
 
 ## 常见问题
 
+### 这是 Codex 官方插件吗？
+
+不是。它是社区/个人维护的 Codex Touch Bar 用量插件，目标是服务 Codex 用户的本机工作流。项目不会冒充官方，也不会使用 OpenAI / Codex 的商标做官方背书。
+
 ### Touch Bar 没有亮
 
 先确认系统 Touch Bar 本身是否工作。如果亮度、音量按钮也不显示，通常是 macOS Touch Bar 服务卡住了，可以尝试：
@@ -196,10 +203,6 @@ Codex,com.openai.codex
 
 Codex 通常在一次回复或任务完成后把 token usage 写入本地 JSONL。helper 会约每 3 秒读取增量，所以写入后会很快更新，但不会在模型输出每个字时变化。
 
-### 为什么不用 MTMR？
-
-MTMR 很适合配置静态 Touch Bar item，但这里需要更细的绘制、对齐、动画和前台感知控制。原生 AppKit helper 可以把整条内容作为一个轻量 custom view 绘制，避免多 item 布局错位。
-
 ## 开发
 
 构建：
@@ -226,7 +229,7 @@ swift test
 
 ## 免责声明
 
-本项目是非官方工具，与 OpenAI / Codex 官方没有隶属关系。Codex 内部接口、session JSONL 结构、Touch Bar system-modal API 都可能随系统或应用版本变化而变化。请自行评估风险后使用。
+本项目是非官方 Codex Touch Bar 插件，与 OpenAI / Codex 官方没有隶属、授权或背书关系。Codex 内部接口、session JSONL 结构、Touch Bar system-modal API 都可能随系统或应用版本变化而变化。请自行评估风险后使用。
 
 ## 支持与赞助
 

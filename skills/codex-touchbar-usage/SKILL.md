@@ -16,7 +16,7 @@ test, modify, or troubleshoot the `codex-touchbar-usage` local plugin.
 - `CodexTouchBarCore` reads `~/.codex/auth.json`, calls the Codex usage endpoint for quota balance and reset times, and falls back to the newest local session `rate_limits` event.
 - Right-side yesterday/cumulative rows use local Codex session `last_token_usage` token amounts, incrementally cached in `~/.codex/touchbar-usage/token-stats-cache.json`.
 - While Codex is frontmost, the helper refreshes local session data every 3 seconds and remote quota data every 30 seconds.
-- `scripts/install_touchbar_helper.sh` builds the helper and registers a LaunchAgent. It only backs up/removes MTMR when run with `REMOVE_MTMR=1`.
+- `scripts/install_touchbar_helper.sh` builds the helper and registers a LaunchAgent.
 
 ## Common Commands
 
