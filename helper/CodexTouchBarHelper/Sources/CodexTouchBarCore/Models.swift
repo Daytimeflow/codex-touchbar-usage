@@ -75,6 +75,24 @@ public struct UsageSnapshot: Codable, Equatable {
             fetchedAt: Int(Date().timeIntervalSince1970)
         )
     }
+
+    public func mergingLocalTokenUsage(from localSnapshot: UsageSnapshot) -> UsageSnapshot {
+        UsageSnapshot(
+            primary: primary,
+            secondary: secondary,
+            contextWindow: localSnapshot.contextWindow ?? contextWindow,
+            totalTokens: localSnapshot.totalTokens ?? totalTokens,
+            lastTokens: localSnapshot.lastTokens ?? lastTokens,
+            yesterdayTokens: localSnapshot.yesterdayTokens ?? yesterdayTokens,
+            cumulativeTokens: localSnapshot.cumulativeTokens ?? cumulativeTokens,
+            inputTokens: localSnapshot.inputTokens ?? inputTokens,
+            outputTokens: localSnapshot.outputTokens ?? outputTokens,
+            planType: planType,
+            source: source,
+            fetchedAt: fetchedAt,
+            error: error
+        )
+    }
 }
 
 public struct TokenStats: Codable, Equatable {

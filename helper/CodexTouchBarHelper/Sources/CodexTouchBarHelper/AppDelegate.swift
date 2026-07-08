@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var remoteRefreshTimer: Timer?
     private var localRefreshTask: Task<Void, Never>?
     private var remoteRefreshTask: Task<Void, Never>?
+    private var currentSnapshot: UsageSnapshot?
     private var isCodexFrontmost = false
     private let localRefreshInterval: TimeInterval = 3
     private let remoteRefreshInterval: TimeInterval = 30
@@ -49,8 +50,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startRefresh() {
         stopRefresh()
-        refreshLocalUsage()
         refreshRemoteUsage()
+        refreshLocalUsage()
 
         localRefreshTimer = Timer.scheduledTimer(withTimeInterval: localRefreshInterval, repeats: true) { [weak self] _ in
             self?.refreshLocalUsage()
@@ -87,7 +88,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 )
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
-                    self.touchBarController.update(snapshot)
+                    guard let currentSnapshot = self.currentSnapshot else { return }
+                    let merged = currentSnapshot.mergingLocalTokenUsage(from: snapshot)
+                    self.currentSnapshot = merged
+                    self.touchBarController.update(merged)
                 }
             } catch {
                 NSLog("CodexTouchBarHelper: local refresh failed: \(error.localizedDescription)")
@@ -104,6 +108,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let snapshot = try await usageStore.resolveUsage(allowRemote: true, cacheMaxAge: 0)
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
+                    guard snapshot.source == "remote" || self.currentSnapshot == nil else {
+                        return
+                    }
+                    self.currentSnapshot = snapshot
                     self.touchBarController.update(snapshot)
                 }
             } catch {

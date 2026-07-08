@@ -128,4 +128,50 @@ final class UsageParsingTests: XCTestCase {
 
         XCTAssertTrue(store.isAllZeroUsage(snapshot))
     }
+
+    func testLocalTokenMergeDoesNotOverwriteRemoteQuotaWindows() {
+        let remote = UsageSnapshot(
+            primary: LimitWindow(name: "primary", usedPercent: 3, windowMinutes: 300, resetsAt: 1_800_000_000),
+            secondary: LimitWindow(name: "secondary", usedPercent: 77, windowMinutes: 10_080, resetsAt: 1_800_010_000),
+            contextWindow: nil,
+            totalTokens: 100,
+            lastTokens: 10,
+            yesterdayTokens: 1_000,
+            cumulativeTokens: 10_000,
+            inputTokens: nil,
+            outputTokens: nil,
+            planType: "prolite",
+            source: "remote",
+            fetchedAt: 1_700_000_000
+        )
+        let historicalSession = UsageSnapshot(
+            primary: LimitWindow(name: "primary", usedPercent: 41, windowMinutes: 300, resetsAt: 1_700_000_000),
+            secondary: LimitWindow(name: "secondary", usedPercent: 12, windowMinutes: 10_080, resetsAt: 1_700_010_000),
+            contextWindow: 258_400,
+            totalTokens: 200,
+            lastTokens: 20,
+            yesterdayTokens: 2_000,
+            cumulativeTokens: 20_000,
+            inputTokens: 11,
+            outputTokens: 9,
+            planType: "old",
+            source: "session",
+            fetchedAt: 1_600_000_000
+        )
+
+        let merged = remote.mergingLocalTokenUsage(from: historicalSession)
+
+        XCTAssertEqual(merged.primary, remote.primary)
+        XCTAssertEqual(merged.secondary, remote.secondary)
+        XCTAssertEqual(merged.planType, remote.planType)
+        XCTAssertEqual(merged.source, remote.source)
+        XCTAssertEqual(merged.fetchedAt, remote.fetchedAt)
+        XCTAssertEqual(merged.contextWindow, 258_400)
+        XCTAssertEqual(merged.totalTokens, 200)
+        XCTAssertEqual(merged.lastTokens, 20)
+        XCTAssertEqual(merged.yesterdayTokens, 2_000)
+        XCTAssertEqual(merged.cumulativeTokens, 20_000)
+        XCTAssertEqual(merged.inputTokens, 11)
+        XCTAssertEqual(merged.outputTokens, 9)
+    }
 }
