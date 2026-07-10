@@ -195,7 +195,7 @@ public final class UsageStore {
         request.timeoutInterval = configuration.requestTimeout
         request.setValue("Bearer \(auth.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("codex-touchbar-usage-native/0.3.2", forHTTPHeaderField: "User-Agent")
+        request.setValue("codex-touchbar-usage-native/0.3.3", forHTTPHeaderField: "User-Agent")
         if let accountID = auth.accountID {
             request.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-ID")
         }

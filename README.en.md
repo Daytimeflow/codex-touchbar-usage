@@ -95,12 +95,12 @@ brew upgrade --cask codex-touchbar-usage
 
 ### GitHub Release (Apple Silicon)
 
-Download `CodexTouchBarUsage-v0.3.2-arm64.zip` and its `.sha256` file from [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest):
+Download `CodexTouchBarUsage-v0.3.3-arm64.zip` and its `.sha256` file from [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest):
 
 ```bash
-shasum -a 256 -c CodexTouchBarUsage-v0.3.2-arm64.zip.sha256
-unzip CodexTouchBarUsage-v0.3.2-arm64.zip
-cd CodexTouchBarUsage-v0.3.2-arm64
+shasum -a 256 -c CodexTouchBarUsage-v0.3.3-arm64.zip.sha256
+unzip CodexTouchBarUsage-v0.3.3-arm64.zip
+cd CodexTouchBarUsage-v0.3.3-arm64
 ./install.sh
 ```
 

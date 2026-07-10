@@ -137,13 +137,16 @@ private func stableLimitWindow(current: LimitWindow?, incoming: LimitWindow?, no
             }
             return incoming
         }
-
-        guard incomingUsed >= currentUsed else { return current }
-        incoming.resetsAt = currentReset
-        return incoming
     }
 
-    return incomingUsed >= currentUsed ? incoming : current
+    guard let incomingReset = incoming.resetsAt, incomingReset > now else {
+        var stabilized = current
+        stabilized.usedPercent = max(currentUsed, incomingUsed)
+        return stabilized
+    }
+
+    incoming.usedPercent = max(currentUsed, incomingUsed)
+    return incoming
 }
 
 public struct TokenStats: Codable, Equatable {

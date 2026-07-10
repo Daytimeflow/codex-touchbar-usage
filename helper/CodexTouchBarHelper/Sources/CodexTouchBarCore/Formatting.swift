@@ -25,7 +25,9 @@ public enum UsageFormatting {
     public static func resetLabel(_ timestamp: Int?) -> String {
         guard let timestamp, timestamp > 0 else { return "--/-- --:--" }
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = .autoupdatingCurrent
         formatter.dateFormat = "MM/dd HH:mm"
         return formatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
     }

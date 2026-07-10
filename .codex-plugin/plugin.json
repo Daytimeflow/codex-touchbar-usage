@@ -1,6 +1,6 @@
 {
   "name": "codex-touchbar-usage",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Show Codex rate-limit balance on a MacBook Touch Bar through a native macOS helper.",
   "author": {
     "name": "Local developer"

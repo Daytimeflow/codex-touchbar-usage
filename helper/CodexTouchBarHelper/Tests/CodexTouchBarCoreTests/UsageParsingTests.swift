@@ -267,11 +267,50 @@ final class UsageParsingTests: XCTestCase {
 
         let stabilized = current.stabilizingQuota(from: regressed, now: 1_500)
 
-        XCTAssertEqual(stabilized.primary, current.primary)
-        XCTAssertEqual(stabilized.secondary, current.secondary)
+        XCTAssertEqual(stabilized.primary?.usedPercent, current.primary?.usedPercent)
+        XCTAssertEqual(stabilized.primary?.resetsAt, regressed.primary?.resetsAt)
+        XCTAssertEqual(stabilized.secondary?.usedPercent, current.secondary?.usedPercent)
+        XCTAssertEqual(stabilized.secondary?.resetsAt, regressed.secondary?.resetsAt)
         XCTAssertEqual(stabilized.yesterdayTokens, 120)
         XCTAssertEqual(stabilized.cumulativeTokens, 1_200)
         XCTAssertEqual(stabilized.fetchedAt, regressed.fetchedAt)
+    }
+
+    func testRemoteQuotaStabilizationRejectsPastResetCorrection() {
+        let current = UsageSnapshot(
+            primary: LimitWindow(name: "primary", usedPercent: 30, windowMinutes: 300, resetsAt: 2_000),
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            tokenUsageSource: "account",
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_000
+        )
+        let stale = UsageSnapshot(
+            primary: LimitWindow(name: "primary", usedPercent: 8, windowMinutes: 300, resetsAt: 1_400),
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            tokenUsageSource: "account",
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_500
+        )
+
+        let stabilized = current.stabilizingQuota(from: stale, now: 1_500)
+
+        XCTAssertEqual(stabilized.primary, current.primary)
     }
 
     func testRemoteQuotaStabilizationAcceptsRealResetAfterWindowExpires() {
