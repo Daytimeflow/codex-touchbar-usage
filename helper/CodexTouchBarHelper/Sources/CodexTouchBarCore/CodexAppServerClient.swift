@@ -24,6 +24,7 @@ final class CodexAppServerClient {
         let completed = DispatchSemaphore(value: 0)
         var pending = Data()
         var rateLimitsResult: JSONObject?
+        var rateLimitsError: String?
         var tokenUsageResult: JSONObject?
         var receivedRateLimitsResponse = false
         var receivedTokenUsageResponse = false
@@ -46,6 +47,9 @@ final class CodexAppServerClient {
                     if id == 2 {
                         receivedRateLimitsResponse = true
                         rateLimitsResult = message["result"] as? JSONObject
+                        if let error = message["error"] as? JSONObject {
+                            rateLimitsError = stringValue(error["message"])
+                        }
                     } else if id == 3 {
                         receivedTokenUsageResponse = true
                         tokenUsageResult = message["result"] as? JSONObject
@@ -67,7 +71,7 @@ final class CodexAppServerClient {
                     "clientInfo": [
                         "name": "codex_touchbar_usage",
                         "title": "Codex Touch Bar Usage",
-                        "version": "0.3.3"
+                        "version": "0.3.4"
                     ]
                 ]
             ],
@@ -92,11 +96,14 @@ final class CodexAppServerClient {
         guard waitResult == .success else {
             throw UsageError.noUsableUsage("Codex app-server usage request timed out")
         }
-        let responses = stateQueue.sync { (rateLimitsResult, tokenUsageResult) }
+        let responses = stateQueue.sync { (rateLimitsResult, rateLimitsError, tokenUsageResult) }
         guard let rateLimits = responses.0 else {
-            throw UsageError.noUsableUsage("Codex app-server returned no rate-limit data")
+            throw UsageError.noUsableUsage(
+                responses.1.map { "Codex app-server rate-limit request failed: \($0)" }
+                    ?? "Codex app-server returned no rate-limit data"
+            )
         }
-        return try Self.combine(rateLimits: rateLimits, tokenUsage: responses.1 ?? [:])
+        return try Self.combine(rateLimits: rateLimits, tokenUsage: responses.2 ?? [:])
     }
 
     static func combine(rateLimits: JSONObject, tokenUsage: JSONObject) throws -> JSONObject {

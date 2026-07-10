@@ -95,12 +95,12 @@ brew upgrade --cask codex-touchbar-usage
 
 ### GitHub Release (Apple Silicon)
 
-Download `CodexTouchBarUsage-v0.3.3-arm64.zip` and its `.sha256` file from [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest):
+Download `CodexTouchBarUsage-v0.3.4-arm64.zip` and its `.sha256` file from [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest):
 
 ```bash
-shasum -a 256 -c CodexTouchBarUsage-v0.3.3-arm64.zip.sha256
-unzip CodexTouchBarUsage-v0.3.3-arm64.zip
-cd CodexTouchBarUsage-v0.3.3-arm64
+shasum -a 256 -c CodexTouchBarUsage-v0.3.4-arm64.zip.sha256
+unzip CodexTouchBarUsage-v0.3.4-arm64.zip
+cd CodexTouchBarUsage-v0.3.4-arm64
 ./install.sh
 ```
 
@@ -232,6 +232,15 @@ View logs:
 tail -f ~/.codex/touchbar-usage/helper.err.log
 tail -f ~/.codex/touchbar-usage/helper.out.log
 ```
+
+If quota data stops updating, check the Codex CLI login first. A desktop app upgrade may require one new authorization:
+
+```bash
+codex login status
+codex login --device-auth
+```
+
+The helper does not read or copy private desktop-app credentials. It only uses credentials stored locally by the official Codex CLI.
 
 ## FAQ
 

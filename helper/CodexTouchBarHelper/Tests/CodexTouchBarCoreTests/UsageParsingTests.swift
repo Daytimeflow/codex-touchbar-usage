@@ -350,6 +350,43 @@ final class UsageParsingTests: XCTestCase {
         XCTAssertEqual(stabilized.primary, reset.primary)
     }
 
+    func testRemoteQuotaStabilizationAcceptsNewCycleBeforeStaleResetExpires() {
+        let current = UsageSnapshot(
+            primary: LimitWindow(name: "primary", usedPercent: 90, windowMinutes: 300, resetsAt: 2_000),
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            tokenUsageSource: "account",
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_000
+        )
+        let reset = UsageSnapshot(
+            primary: LimitWindow(name: "primary", usedPercent: 2, windowMinutes: 300, resetsAt: 20_000),
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            tokenUsageSource: "account",
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_500
+        )
+
+        let stabilized = current.stabilizingQuota(from: reset, now: 1_500)
+
+        XCTAssertEqual(stabilized.primary, reset.primary)
+    }
+
     func testCachedUsagePreservesOfficialSourceForStartupStabilization() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("codex-touchbar-cache-source-\(UUID().uuidString)")
@@ -382,5 +419,67 @@ final class UsageParsingTests: XCTestCase {
 
         XCTAssertEqual(snapshot.source, "app-server")
         XCTAssertEqual(snapshot.primary?.usedPercent, 30)
+    }
+
+    func testSessionFallbackDoesNotOverwriteOfficialCache() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-touchbar-session-cache-\(UUID().uuidString)")
+        let cacheFile = directory.appendingPathComponent("usage-cache.json")
+        let sessionsDirectory = directory.appendingPathComponent("sessions/2026/07/11")
+        let sessionFile = sessionsDirectory.appendingPathComponent("rollout-test.jsonl")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        try FileManager.default.createDirectory(at: sessionsDirectory, withIntermediateDirectories: true)
+        try writeJSONObject(
+            [
+                "source": "app-server",
+                "fetched_at": 1_000,
+                "raw": [
+                    "rate_limit": [
+                        "primary_window": [
+                            "used_percent": 30,
+                            "limit_window_seconds": 18_000,
+                            "reset_at": 2_000
+                        ]
+                    ]
+                ]
+            ],
+            to: cacheFile
+        )
+        let sessionEvent: JSONObject = [
+            "timestamp": "2026-07-11T00:00:00Z",
+            "payload": [
+                "rate_limits": [
+                    "primary": [
+                        "used_percent": 90,
+                        "window_minutes": 300,
+                        "resets_at": 20_000
+                    ],
+                    "secondary": [
+                        "used_percent": 38,
+                        "window_minutes": 10_080,
+                        "resets_at": 80_000
+                    ]
+                ]
+            ]
+        ]
+        var sessionData = try JSONSerialization.data(withJSONObject: sessionEvent)
+        sessionData.append(10)
+        try sessionData.write(to: sessionFile)
+
+        let configuration = UsageStoreConfiguration(
+            codexHome: directory,
+            cacheFile: cacheFile,
+            tokenStatsCacheFile: directory.appendingPathComponent("token-cache.json")
+        )
+        let snapshot = try await UsageStore(configuration: configuration).resolveUsage(
+            allowRemote: false,
+            cacheMaxAge: 0,
+            writeCache: true
+        )
+        let persisted = try readJSONObject(from: cacheFile)
+
+        XCTAssertEqual(snapshot.source, "session")
+        XCTAssertEqual(stringValue(persisted["source"]), "app-server")
     }
 }

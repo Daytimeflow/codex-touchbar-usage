@@ -41,10 +41,7 @@ public final class UsageStore {
                         let (sessionSnapshot, sessionRaw) = try latestSessionSnapshot(error: "remote returned all-zero usage")
                         if !isAllZeroUsage(sessionSnapshot) {
                             if writeCache {
-                                try? writeJSONObject(
-                                    ["raw": sessionRaw, "source": "session", "fetched_at": sessionSnapshot.fetchedAt],
-                                    to: configuration.cacheFile
-                                )
+                                writeSessionCacheIfNoOfficialCache(raw: sessionRaw, snapshot: sessionSnapshot)
                             }
                             return sessionSnapshot
                         }
@@ -66,10 +63,7 @@ public final class UsageStore {
         do {
             let (snapshot, raw) = try latestSessionSnapshot(error: errors.joined(separator: "; "))
             if writeCache {
-                try? writeJSONObject(
-                    ["raw": raw, "source": "session", "fetched_at": snapshot.fetchedAt],
-                    to: configuration.cacheFile
-                )
+                writeSessionCacheIfNoOfficialCache(raw: raw, snapshot: snapshot)
             }
             return snapshot
         } catch {
@@ -172,16 +166,30 @@ public final class UsageStore {
     }
 
     private func fetchRemoteUsage() async throws -> (raw: JSONObject, source: String) {
-        if let client = CodexAppServerClient(timeout: configuration.requestTimeout),
-           let raw = try? client.fetchUsage() {
-            return (raw, "app-server")
+        var failures: [String] = []
+        if let client = CodexAppServerClient(timeout: configuration.requestTimeout) {
+            do {
+                return (try client.fetchUsage(), "app-server")
+            } catch {
+                failures.append("app-server: \(error.localizedDescription)")
+            }
+        } else {
+            failures.append("app-server: Codex executable not found")
         }
-        let auth = try readAuthCredentials()
-        return (try await fetchAuthenticatedJSON(url: configuration.endpoint, auth: auth), "remote")
+
+        do {
+            let auth = try readAuthCredentials()
+            return (try await fetchAuthenticatedJSON(url: configuration.endpoint, auth: auth), "remote")
+        } catch {
+            failures.append("authenticated HTTP: \(error.localizedDescription)")
+            throw UsageError.noUsableUsage(failures.joined(separator: "; "))
+        }
     }
 
     private func readAuthCredentials() throws -> (accessToken: String, accountID: String?) {
-        let auth = try readJSONObject(from: configuration.authFile)
+        guard let auth = try? readJSONObject(from: configuration.authFile) else {
+            throw UsageError.missingAccessToken(configuration.authFile)
+        }
         let tokens = auth["tokens"] as? JSONObject ?? [:]
         guard let accessToken = stringValue(tokens["access_token"]) else {
             throw UsageError.missingAccessToken(configuration.authFile)
@@ -195,7 +203,7 @@ public final class UsageStore {
         request.timeoutInterval = configuration.requestTimeout
         request.setValue("Bearer \(auth.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("codex-touchbar-usage-native/0.3.3", forHTTPHeaderField: "User-Agent")
+        request.setValue("codex-touchbar-usage-native/0.3.4", forHTTPHeaderField: "User-Agent")
         if let accountID = auth.accountID {
             request.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-ID")
         }
@@ -350,6 +358,16 @@ public final class UsageStore {
 
         try? writeJSONObject(
             ["raw": raw, "source": source, "fetched_at": snapshot.fetchedAt],
+            to: configuration.cacheFile
+        )
+    }
+
+    private func writeSessionCacheIfNoOfficialCache(raw: JSONObject, snapshot: UsageSnapshot) {
+        if let cached = try? loadCachedSnapshot(), ["app-server", "remote"].contains(cached.source) {
+            return
+        }
+        try? writeJSONObject(
+            ["raw": raw, "source": "session", "fetched_at": snapshot.fetchedAt],
             to: configuration.cacheFile
         )
     }

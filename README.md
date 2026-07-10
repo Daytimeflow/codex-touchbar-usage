@@ -95,12 +95,12 @@ brew upgrade --cask codex-touchbar-usage
 
 ### GitHub Release（Apple Silicon）
 
-从 [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest) 下载 `CodexTouchBarUsage-v0.3.3-arm64.zip` 和对应的 `.sha256`：
+从 [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest) 下载 `CodexTouchBarUsage-v0.3.4-arm64.zip` 和对应的 `.sha256`：
 
 ```bash
-shasum -a 256 -c CodexTouchBarUsage-v0.3.3-arm64.zip.sha256
-unzip CodexTouchBarUsage-v0.3.3-arm64.zip
-cd CodexTouchBarUsage-v0.3.3-arm64
+shasum -a 256 -c CodexTouchBarUsage-v0.3.4-arm64.zip.sha256
+unzip CodexTouchBarUsage-v0.3.4-arm64.zip
+cd CodexTouchBarUsage-v0.3.4-arm64
 ./install.sh
 ```
 
@@ -232,6 +232,15 @@ Release 安装（在解压目录中）：
 tail -f ~/.codex/touchbar-usage/helper.err.log
 tail -f ~/.codex/touchbar-usage/helper.out.log
 ```
+
+如果额度长期不更新，先检查 Codex CLI 登录态。桌面端升级后可能需要重新授权一次：
+
+```bash
+codex login status
+codex login --device-auth
+```
+
+helper 不会读取或复制桌面端私有登录信息，只使用官方 Codex CLI 保存的本机凭据。
 
 ## 常见问题
 

@@ -2,6 +2,14 @@
 
 All notable changes to Codex Touch Bar Usage are documented here.
 
+## [0.3.4] - 2026-07-11
+
+### Fixed
+
+- Accept a lower quota percentage when a materially later reset timestamp identifies a new quota cycle, even if the previously cached reset time has not passed yet.
+- Preserve the last official cache when authenticated refreshes fall back to local session data.
+- Report app-server authentication failures instead of silently ignoring session fallback refreshes.
+
 ## [0.3.3] - 2026-07-10
 
 ### Fixed
@@ -40,6 +48,7 @@ All notable changes to Codex Touch Bar Usage are documented here.
 - Local JSONL token totals remain fallback-only and no longer replace official account totals.
 - All-zero and stale snapshots are rejected before they can replace valid quota data.
 
+[0.3.4]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.4
 [0.3.3]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.3
 [0.3.2]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.2
 [0.3.1]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.1

@@ -73,6 +73,11 @@ if ! wait_for_helper; then
   exit 2
 fi
 
+if [[ ! -s "${HOME}/.codex/auth.json" ]]; then
+  echo "Warning: Codex CLI credentials are missing. Official quota data cannot refresh." >&2
+  echo "Run: codex login --device-auth" >&2
+fi
+
 cat <<MSG
 Installed CodexTouchBarHelper.
 

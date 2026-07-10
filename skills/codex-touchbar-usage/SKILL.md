@@ -15,9 +15,10 @@ test, modify, or troubleshoot the `codex-touchbar-usage` local plugin.
 - Frontmost app changes are event-driven through `NSWorkspace.didActivateApplicationNotification`.
 - `CodexTouchBarCore` briefly invokes the installed Codex/ChatGPT app-server for official quota and account token usage, then exits it after each refresh.
 - Quota balance and reset times come from `account/rateLimits/read`; yesterday/lifetime tokens come from `account/usage/read` so they match the profile page.
-- `~/.codex/auth.json`, local session `rate_limits`, and incremental `last_token_usage` stats are fallback sources only.
+- Official app-server access uses the Codex CLI credentials in `~/.codex/auth.json`; local session `rate_limits` and incremental `last_token_usage` stats are fallback sources only.
 - While Codex or the ChatGPT Codex shell is frontmost, official account data refreshes every 30 seconds. Local fallback data is checked between official refreshes but cannot replace valid account totals.
-- Within an active quota window, non-monotonic official snapshots are stabilized so stale percentages cannot replace newer usage; a lower percentage is accepted only after the previous reset time has passed.
+- Within an active quota window, stale percentages cannot replace newer usage; a lower percentage is accepted after the previous reset time passes or a materially later reset timestamp identifies a new cycle.
+- Session fallback data cannot overwrite an existing official cache. Missing or expired CLI credentials are reported in the helper log instead of silently freezing without a diagnostic.
 - `scripts/install_touchbar_helper.sh` builds the helper and registers a LaunchAgent.
 
 ## Common Commands
@@ -63,5 +64,6 @@ Uninstall the helper:
 - If the Touch Bar is blank, make sure Codex is the frontmost app and the helper is running:
   `pgrep -fl CodexTouchBarHelper`.
 - If usage cannot be fetched, run `--once-json --no-remote`; it should use local session/cache data.
+- If official quota data is stale, run `codex login status`; if needed, use `codex login --device-auth` to recreate `~/.codex/auth.json`.
 - Logs are written to `~/.codex/touchbar-usage/helper.out.log` and `~/.codex/touchbar-usage/helper.err.log`.
 - Do not print or log the contents of `~/.codex/auth.json`.

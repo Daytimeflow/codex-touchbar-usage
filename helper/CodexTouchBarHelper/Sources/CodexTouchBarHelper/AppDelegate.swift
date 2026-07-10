@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cachePreloadTask: Task<Void, Never>?
     private var currentSnapshot: UsageSnapshot?
     private var lastOfficialSnapshot: UsageSnapshot?
+    private var lastRemoteFailureDescription: String?
     private var isCodexFrontmost = false
     private let localRefreshInterval: TimeInterval = 3
     private let remoteRefreshInterval: TimeInterval = 30
@@ -121,8 +122,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
                     guard snapshot.source == "app-server" || snapshot.source == "remote" || self.currentSnapshot == nil else {
+                        self.logRemoteFallback(snapshot)
                         return
                     }
+                    self.lastRemoteFailureDescription = nil
                     let stabilized = self.lastOfficialSnapshot?.stabilizingQuota(from: snapshot) ?? snapshot
                     self.lastOfficialSnapshot = stabilized
                     self.currentSnapshot = stabilized
@@ -132,6 +135,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSLog("CodexTouchBarHelper: remote refresh failed: \(error.localizedDescription)")
             }
         }
+    }
+
+    private func logRemoteFallback(_ snapshot: UsageSnapshot) {
+        let description = snapshot.error ?? "official usage unavailable; using local session fallback"
+        guard description != lastRemoteFailureDescription else { return }
+        lastRemoteFailureDescription = description
+        NSLog("CodexTouchBarHelper: official refresh unavailable: \(description)")
     }
 
     private func targetApplicationNames() -> Set<String> {

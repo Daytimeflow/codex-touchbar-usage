@@ -145,8 +145,25 @@ private func stableLimitWindow(current: LimitWindow?, incoming: LimitWindow?, no
         return stabilized
     }
 
+    if incomingUsed < currentUsed,
+       startsNewQuotaCycle(current: current, incoming: incoming, currentReset: current.resetsAt, incomingReset: incomingReset) {
+        return incoming
+    }
+
     incoming.usedPercent = max(currentUsed, incomingUsed)
     return incoming
+}
+
+private func startsNewQuotaCycle(
+    current: LimitWindow,
+    incoming: LimitWindow,
+    currentReset: Int?,
+    incomingReset: Int
+) -> Bool {
+    guard let currentReset, incomingReset > currentReset else { return false }
+    guard let windowMinutes = incoming.windowMinutes ?? current.windowMinutes, windowMinutes > 0 else { return false }
+    let minimumCycleShift = max(60, windowMinutes * 60 / 4)
+    return incomingReset - currentReset >= minimumCycleShift
 }
 
 public struct TokenStats: Codable, Equatable {
