@@ -8,6 +8,17 @@ EXECUTABLE="${APP_DIR}/Contents/MacOS/CodexTouchBarHelper"
 LAUNCH_AGENT_DIR="${HOME}/Library/LaunchAgents"
 LAUNCH_AGENT="${LAUNCH_AGENT_DIR}/com.local.codex-touchbar-helper.plist"
 CACHE_DIR="${HOME}/.codex/touchbar-usage"
+DOMAIN="gui/$(id -u)"
+
+wait_for_helper() {
+  for _ in {1..30}; do
+    if /usr/bin/pgrep -fx "${EXECUTABLE}" >/dev/null 2>&1; then
+      return 0
+    fi
+    /bin/sleep 0.1
+  done
+  return 1
+}
 
 "${PLUGIN_DIR}/scripts/build_touchbar_helper.sh"
 
@@ -20,7 +31,7 @@ for log_file in "${CACHE_DIR}/helper.out.log" "${CACHE_DIR}/helper.err.log"; do
 done
 
 if [[ -f "${LAUNCH_AGENT}" ]]; then
-  /bin/launchctl bootout "gui/$(id -u)" "${LAUNCH_AGENT}" >/dev/null 2>&1 || true
+  /bin/launchctl bootout "${DOMAIN}" "${LAUNCH_AGENT}" >/dev/null 2>&1 || true
 fi
 
 cat > "${LAUNCH_AGENT}" <<PLIST
@@ -52,12 +63,14 @@ cat > "${LAUNCH_AGENT}" <<PLIST
 PLIST
 
 /usr/bin/pkill -fx "${EXECUTABLE}" >/dev/null 2>&1 || true
-/bin/launchctl bootstrap "gui/$(id -u)" "${LAUNCH_AGENT}" >/dev/null 2>&1 || true
-/bin/launchctl enable "gui/$(id -u)/com.local.codex-touchbar-helper" >/dev/null 2>&1 || true
-/bin/launchctl kickstart -k "gui/$(id -u)/com.local.codex-touchbar-helper" >/dev/null 2>&1 || true
+/bin/launchctl bootstrap "${DOMAIN}" "${LAUNCH_AGENT}" >/dev/null 2>&1 || true
+/bin/launchctl enable "${DOMAIN}/com.local.codex-touchbar-helper" >/dev/null 2>&1 || true
+/bin/launchctl kickstart -k "${DOMAIN}/com.local.codex-touchbar-helper" >/dev/null 2>&1 || true
 
-if ! /usr/bin/pgrep -fx "${EXECUTABLE}" >/dev/null 2>&1; then
-  /usr/bin/open -gja "${APP_DIR}" || true
+if ! wait_for_helper; then
+  echo "CodexTouchBarHelper was installed but LaunchAgent could not start it." >&2
+  echo "Inspect with: launchctl print ${DOMAIN}/com.local.codex-touchbar-helper" >&2
+  exit 2
 fi
 
 cat <<MSG

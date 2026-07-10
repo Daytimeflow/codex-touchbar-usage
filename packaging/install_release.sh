@@ -10,6 +10,16 @@ LAUNCH_AGENT="${LAUNCH_AGENT_DIR}/com.local.codex-touchbar-helper.plist"
 CACHE_DIR="${HOME}/.codex/touchbar-usage"
 DOMAIN="gui/$(id -u)"
 
+wait_for_helper() {
+  for _ in {1..30}; do
+    if /usr/bin/pgrep -fx "${EXECUTABLE}" >/dev/null 2>&1; then
+      return 0
+    fi
+    /bin/sleep 0.1
+  done
+  return 1
+}
+
 if [[ ! -x "${SOURCE_APP}/Contents/MacOS/CodexTouchBarHelper" ]]; then
   echo "CodexTouchBarHelper.app is missing from the release folder." >&2
   exit 1
@@ -62,13 +72,9 @@ PLIST
 /bin/launchctl enable "${DOMAIN}/com.local.codex-touchbar-helper" >/dev/null 2>&1 || true
 /bin/launchctl kickstart -k "${DOMAIN}/com.local.codex-touchbar-helper" >/dev/null 2>&1 || true
 
-if ! /usr/bin/pgrep -fx "${EXECUTABLE}" >/dev/null 2>&1; then
-  /usr/bin/open -gja "${APP_DIR}" || true
-fi
-
-if ! /usr/bin/pgrep -fx "${EXECUTABLE}" >/dev/null 2>&1; then
-  echo "CodexTouchBarHelper was installed but could not be started." >&2
-  echo "Run ${EXECUTABLE} manually to inspect the error." >&2
+if ! wait_for_helper; then
+  echo "CodexTouchBarHelper was installed but LaunchAgent could not start it." >&2
+  echo "Inspect with: launchctl print ${DOMAIN}/com.local.codex-touchbar-helper" >&2
   exit 2
 fi
 

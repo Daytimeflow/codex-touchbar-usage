@@ -81,24 +81,26 @@
 ### Homebrew（推荐）
 
 ```bash
-brew install daytimeflow/tap/codex-touchbar-usage && brew services start daytimeflow/tap/codex-touchbar-usage
+brew install --cask daytimeflow/tap/codex-touchbar-usage
 ```
+
+Cask 会自动安装 helper、注册 LaunchAgent 并立即启动，无需再执行 `brew services start`。
 
 升级：
 
 ```bash
 brew update
-brew upgrade codex-touchbar-usage
+brew upgrade --cask codex-touchbar-usage
 ```
 
 ### GitHub Release（Apple Silicon）
 
-从 [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest) 下载 `CodexTouchBarUsage-v0.3.1-arm64.zip` 和对应的 `.sha256`：
+从 [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest) 下载 `CodexTouchBarUsage-v0.3.2-arm64.zip` 和对应的 `.sha256`：
 
 ```bash
-shasum -a 256 -c CodexTouchBarUsage-v0.3.1-arm64.zip.sha256
-unzip CodexTouchBarUsage-v0.3.1-arm64.zip
-cd CodexTouchBarUsage-v0.3.1-arm64
+shasum -a 256 -c CodexTouchBarUsage-v0.3.2-arm64.zip.sha256
+unzip CodexTouchBarUsage-v0.3.2-arm64.zip
+cd CodexTouchBarUsage-v0.3.2-arm64
 ./install.sh
 ```
 
@@ -150,7 +152,7 @@ Homebrew 安装：
 
 ```bash
 brew update
-brew upgrade codex-touchbar-usage
+brew upgrade --cask codex-touchbar-usage
 ```
 
 源码安装：
@@ -165,8 +167,7 @@ git pull
 Homebrew 安装：
 
 ```bash
-brew services stop daytimeflow/tap/codex-touchbar-usage
-brew uninstall codex-touchbar-usage
+brew uninstall --cask codex-touchbar-usage
 ```
 
 Release 安装（在解压目录中）：
