@@ -31,7 +31,7 @@ if [[ -f "${LAUNCH_AGENT}" ]]; then
   fi
 fi
 
-if ! /usr/bin/pgrep -x CodexTouchBarHelper >/dev/null 2>&1; then
+if ! /usr/bin/pgrep -fx "${EXECUTABLE}" >/dev/null 2>&1; then
   /usr/bin/open -gja "${APP_DIR}" >/dev/null 2>&1 || "${EXECUTABLE}" >/dev/null 2>&1 &
 fi
 

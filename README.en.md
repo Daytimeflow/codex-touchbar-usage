@@ -57,7 +57,7 @@ Keywords: `Codex Touch Bar`, `Codex usage`, `Codex token tracker`, `Codex quota`
 
 - MacBook Pro with Touch Bar
 - macOS 12 or later
-- Codex Desktop installed
+- The latest Codex / ChatGPT desktop app installed (the new shell still hosts Codex services)
 - Signed in to Codex, with `~/.codex/auth.json` available locally
 - Swift toolchain: full Xcode or Command Line Tools both work
 
@@ -128,9 +128,9 @@ It does not delete your Codex login information and does not remove `~/.codex`.
 
 | Data | Source |
 | --- | --- |
-| Quota balance / reset times | Codex usage endpoint, authenticated with the access token from `~/.codex/auth.json` |
-| Recent token information | Local Codex session JSONL files |
-| Yesterday / lifetime tokens | Incremental stats from local `last_token_usage.total_tokens` records |
+| Quota balance / reset times | Official Codex app-server `account/rateLimits/read` |
+| Yesterday / lifetime tokens | Official Codex app-server `account/usage/read`, matching the profile page |
+| Local fallback | Codex session JSONL and usage cache, used only when official data is unavailable |
 | Cache | `~/.codex/touchbar-usage/` |
 
 Privacy principles:
@@ -138,7 +138,7 @@ Privacy principles:
 - local session contents are not uploaded;
 - access tokens are not logged or printed;
 - when the helper is hidden, it does not refresh UI or make network requests;
-- remote requests are used only for quota balance and reset times.
+- app-server starts only briefly for an official data refresh and exits immediately afterward; it is not an additional resident process.
 
 ## Useful Commands
 
@@ -198,14 +198,24 @@ launchctl print gui/$(id -u)/com.local.codex-touchbar-helper
 The LaunchAgent matches the following targets by default:
 
 ```text
-Codex,com.openai.codex
+Codex,ChatGPT,com.openai.codex
 ```
 
 If you use a renamed Codex app, edit `CODEX_TOUCHBAR_TARGET_APPS` in the LaunchAgent.
 
+### How much storage does it use, and should I clean it periodically?
+
+The helper stores only small caches and diagnostic logs in `~/.codex/touchbar-usage/`, normally measured in MB. The installer rotates helper logs larger than 2 MB. `~/.codex/sessions/` is Codex task history, not plugin data; deleting it affects historical tasks and context recovery, so do not remove it merely to clean up this plugin.
+
+Check their sizes separately:
+
+```bash
+du -sh ~/.codex/touchbar-usage ~/.codex/sessions
+```
+
 ### Why does token usage not update character by character?
 
-Codex usually writes token usage into local JSONL files after a response or task completes. The helper reads incremental updates about every 3 seconds, so it updates quickly after the write happens, but it will not change on every generated character.
+The right-side values use the official account totals shown on the Codex profile page and refresh about every 30 seconds. The upstream profile data may update in batches, so it does not change with every generated character; local JSONL increments are only a fallback when official account usage is unavailable.
 
 ## Development
 

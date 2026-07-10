@@ -24,6 +24,7 @@ public struct UsageSnapshot: Codable, Equatable {
     public var cumulativeTokens: Int?
     public var inputTokens: Int?
     public var outputTokens: Int?
+    public var tokenUsageSource: String?
     public var planType: String?
     public var source: String
     public var fetchedAt: Int
@@ -39,6 +40,7 @@ public struct UsageSnapshot: Codable, Equatable {
         cumulativeTokens: Int?,
         inputTokens: Int?,
         outputTokens: Int?,
+        tokenUsageSource: String? = nil,
         planType: String?,
         source: String,
         fetchedAt: Int,
@@ -53,6 +55,7 @@ public struct UsageSnapshot: Codable, Equatable {
         self.cumulativeTokens = cumulativeTokens
         self.inputTokens = inputTokens
         self.outputTokens = outputTokens
+        self.tokenUsageSource = tokenUsageSource
         self.planType = planType
         self.source = source
         self.fetchedAt = fetchedAt
@@ -70,6 +73,7 @@ public struct UsageSnapshot: Codable, Equatable {
             cumulativeTokens: nil,
             inputTokens: nil,
             outputTokens: nil,
+            tokenUsageSource: nil,
             planType: nil,
             source: "placeholder",
             fetchedAt: Int(Date().timeIntervalSince1970)
@@ -77,16 +81,22 @@ public struct UsageSnapshot: Codable, Equatable {
     }
 
     public func mergingLocalTokenUsage(from localSnapshot: UsageSnapshot) -> UsageSnapshot {
-        UsageSnapshot(
+        let preservesAccountTotals = tokenUsageSource == "account"
+        return UsageSnapshot(
             primary: primary,
             secondary: secondary,
             contextWindow: localSnapshot.contextWindow ?? contextWindow,
             totalTokens: localSnapshot.totalTokens ?? totalTokens,
             lastTokens: localSnapshot.lastTokens ?? lastTokens,
-            yesterdayTokens: localSnapshot.yesterdayTokens ?? yesterdayTokens,
-            cumulativeTokens: localSnapshot.cumulativeTokens ?? cumulativeTokens,
+            yesterdayTokens: preservesAccountTotals
+                ? (yesterdayTokens ?? localSnapshot.yesterdayTokens)
+                : (localSnapshot.yesterdayTokens ?? yesterdayTokens),
+            cumulativeTokens: preservesAccountTotals
+                ? (cumulativeTokens ?? localSnapshot.cumulativeTokens)
+                : (localSnapshot.cumulativeTokens ?? cumulativeTokens),
             inputTokens: localSnapshot.inputTokens ?? inputTokens,
             outputTokens: localSnapshot.outputTokens ?? outputTokens,
+            tokenUsageSource: preservesAccountTotals ? tokenUsageSource : localSnapshot.tokenUsageSource,
             planType: planType,
             source: source,
             fetchedAt: fetchedAt,

@@ -32,9 +32,10 @@ public final class UsageStore {
 
         if allowRemote {
             do {
-                var raw = try await fetchRemoteUsage()
+                let remote = try await fetchRemoteUsage()
+                var raw = remote.raw
                 enrichWithLocalUsage(&raw)
-                let snapshot = normalizeUsage(raw, source: "remote")
+                let snapshot = normalizeUsage(raw, source: remote.source)
                 if isAllZeroUsage(snapshot) {
                     do {
                         let (sessionSnapshot, sessionRaw) = try latestSessionSnapshot(error: "remote returned all-zero usage")
@@ -54,7 +55,7 @@ public final class UsageStore {
                 } else {
                     if writeCache {
                         try? writeJSONObject(
-                            ["raw": raw, "source": "remote", "fetched_at": snapshot.fetchedAt],
+                            ["raw": raw, "source": remote.source, "fetched_at": snapshot.fetchedAt],
                             to: configuration.cacheFile
                         )
                     }
@@ -97,6 +98,30 @@ public final class UsageStore {
         tokenStatsStore.load(fullScan: true)
     }
 
+    public func resolveCachedUsage() throws -> UsageSnapshot {
+        let raw = try loadCachedRaw()
+        return normalizeUsage(raw, source: "cache")
+    }
+
+    public func resolveLocalTokenUsage() -> UsageSnapshot {
+        let stats = tokenStatsStore.load(fullScan: false)
+        return UsageSnapshot(
+            primary: nil,
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: stats.yesterdayTokens,
+            cumulativeTokens: stats.cumulativeTokens,
+            inputTokens: nil,
+            outputTokens: nil,
+            tokenUsageSource: "local",
+            planType: nil,
+            source: "local",
+            fetchedAt: Int(Date().timeIntervalSince1970)
+        )
+    }
+
     func normalizeUsage(_ raw: JSONObject, source: String, error: String? = nil) -> UsageSnapshot {
         let rateLimits = (raw["rate_limits"] as? JSONObject) ?? (raw["rateLimits"] as? JSONObject) ?? [:]
         let apiRateLimit = raw["rate_limit"] as? JSONObject
@@ -111,6 +136,7 @@ public final class UsageStore {
         let outputTokens = intAtPath(tokenInfo, "last_token_usage", "output_tokens")
         let yesterdayTokens = intValue(tokenStats["yesterday_tokens"])
         let cumulativeTokens = intValue(tokenStats["cumulative_tokens"])
+        let tokenUsageSource = stringValue(tokenStats["source"])
 
         if let apiRateLimit {
             return UsageSnapshot(
@@ -123,6 +149,7 @@ public final class UsageStore {
                 cumulativeTokens: cumulativeTokens,
                 inputTokens: inputTokens,
                 outputTokens: outputTokens,
+                tokenUsageSource: tokenUsageSource,
                 planType: stringValue(raw["plan_type"]),
                 source: source,
                 fetchedAt: now,
@@ -140,6 +167,7 @@ public final class UsageStore {
             cumulativeTokens: cumulativeTokens,
             inputTokens: inputTokens,
             outputTokens: outputTokens,
+            tokenUsageSource: tokenUsageSource,
             planType: stringValue(rateLimits["plan_type"]) ?? stringValue(raw["plan_type"]),
             source: source,
             fetchedAt: now,
@@ -147,9 +175,13 @@ public final class UsageStore {
         )
     }
 
-    private func fetchRemoteUsage() async throws -> JSONObject {
+    private func fetchRemoteUsage() async throws -> (raw: JSONObject, source: String) {
+        if let client = CodexAppServerClient(timeout: configuration.requestTimeout),
+           let raw = try? client.fetchUsage() {
+            return (raw, "app-server")
+        }
         let auth = try readAuthCredentials()
-        return try await fetchAuthenticatedJSON(url: configuration.endpoint, auth: auth)
+        return (try await fetchAuthenticatedJSON(url: configuration.endpoint, auth: auth), "remote")
     }
 
     private func readAuthCredentials() throws -> (accessToken: String, accountID: String?) {
@@ -167,7 +199,7 @@ public final class UsageStore {
         request.timeoutInterval = configuration.requestTimeout
         request.setValue("Bearer \(auth.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("codex-touchbar-usage-native/0.2", forHTTPHeaderField: "User-Agent")
+        request.setValue("codex-touchbar-usage-native/0.3", forHTTPHeaderField: "User-Agent")
         if let accountID = auth.accountID {
             request.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-ID")
         }
@@ -249,11 +281,14 @@ public final class UsageStore {
             raw.merge(tokenInfo) { _, new in new }
         }
         let stats = tokenStatsStore.load(fullScan: false)
-        raw["token_stats"] = [
-            "yesterday_tokens": stats.yesterdayTokens,
-            "cumulative_tokens": stats.cumulativeTokens,
-            "yesterday_date": stats.yesterdayDate
-        ]
+        if raw["token_stats"] == nil {
+            raw["token_stats"] = [
+                "source": "local",
+                "yesterday_tokens": stats.yesterdayTokens,
+                "cumulative_tokens": stats.cumulativeTokens,
+                "yesterday_date": stats.yesterdayDate
+            ]
+        }
     }
 
     private func latestSessionSnapshot(error: String?) throws -> (UsageSnapshot, JSONObject) {

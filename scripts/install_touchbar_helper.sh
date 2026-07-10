@@ -13,6 +13,12 @@ CACHE_DIR="${HOME}/.codex/touchbar-usage"
 
 mkdir -p "${CACHE_DIR}" "${LAUNCH_AGENT_DIR}"
 
+for log_file in "${CACHE_DIR}/helper.out.log" "${CACHE_DIR}/helper.err.log"; do
+  if [[ -f "${log_file}" ]] && [[ $(stat -f%z "${log_file}") -gt 2097152 ]]; then
+    mv "${log_file}" "${log_file}.old"
+  fi
+done
+
 if [[ -f "${LAUNCH_AGENT}" ]]; then
   /bin/launchctl bootout "gui/$(id -u)" "${LAUNCH_AGENT}" >/dev/null 2>&1 || true
 fi
@@ -39,18 +45,18 @@ cat > "${LAUNCH_AGENT}" <<PLIST
   <key>EnvironmentVariables</key>
   <dict>
     <key>CODEX_TOUCHBAR_TARGET_APPS</key>
-    <string>Codex,com.openai.codex</string>
+    <string>Codex,ChatGPT,com.openai.codex</string>
   </dict>
 </dict>
 </plist>
 PLIST
 
-/usr/bin/pkill -x CodexTouchBarHelper >/dev/null 2>&1 || true
+/usr/bin/pkill -fx "${EXECUTABLE}" >/dev/null 2>&1 || true
 /bin/launchctl bootstrap "gui/$(id -u)" "${LAUNCH_AGENT}" >/dev/null 2>&1 || true
 /bin/launchctl enable "gui/$(id -u)/com.local.codex-touchbar-helper" >/dev/null 2>&1 || true
 /bin/launchctl kickstart -k "gui/$(id -u)/com.local.codex-touchbar-helper" >/dev/null 2>&1 || true
 
-if ! /usr/bin/pgrep -x CodexTouchBarHelper >/dev/null 2>&1; then
+if ! /usr/bin/pgrep -fx "${EXECUTABLE}" >/dev/null 2>&1; then
   /usr/bin/open -gja "${APP_DIR}" || true
 fi
 

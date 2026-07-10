@@ -13,9 +13,10 @@ test, modify, or troubleshoot the `codex-touchbar-usage` local plugin.
 - The plugin installs a lightweight native macOS helper app at `~/Applications/CodexTouchBarHelper.app`.
 - The helper uses an AppKit `NSTouchBar` system modal view and only presents it while Codex is frontmost.
 - Frontmost app changes are event-driven through `NSWorkspace.didActivateApplicationNotification`.
-- `CodexTouchBarCore` reads `~/.codex/auth.json`, calls the Codex usage endpoint for quota balance and reset times, and falls back to the newest local session `rate_limits` event.
-- Right-side yesterday/cumulative rows use local Codex session `last_token_usage` token amounts, incrementally cached in `~/.codex/touchbar-usage/token-stats-cache.json`.
-- While Codex is frontmost, the helper refreshes local session data every 3 seconds and remote quota data every 30 seconds.
+- `CodexTouchBarCore` briefly invokes the installed Codex/ChatGPT app-server for official quota and account token usage, then exits it after each refresh.
+- Quota balance and reset times come from `account/rateLimits/read`; yesterday/lifetime tokens come from `account/usage/read` so they match the profile page.
+- `~/.codex/auth.json`, local session `rate_limits`, and incremental `last_token_usage` stats are fallback sources only.
+- While Codex or the ChatGPT Codex shell is frontmost, the helper refreshes local fallback data every 3 seconds and official account data every 30 seconds.
 - `scripts/install_touchbar_helper.sh` builds the helper and registers a LaunchAgent.
 
 ## Common Commands
@@ -59,7 +60,7 @@ Uninstall the helper:
 ## Troubleshooting
 
 - If the Touch Bar is blank, make sure Codex is the frontmost app and the helper is running:
-  `pgrep -x CodexTouchBarHelper`.
+  `pgrep -fl CodexTouchBarHelper`.
 - If usage cannot be fetched, run `--once-json --no-remote`; it should use local session/cache data.
 - Logs are written to `~/.codex/touchbar-usage/helper.out.log` and `~/.codex/touchbar-usage/helper.err.log`.
 - Do not print or log the contents of `~/.codex/auth.json`.

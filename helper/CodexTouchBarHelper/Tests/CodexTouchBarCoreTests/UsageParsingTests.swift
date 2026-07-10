@@ -129,7 +129,7 @@ final class UsageParsingTests: XCTestCase {
         XCTAssertTrue(store.isAllZeroUsage(snapshot))
     }
 
-    func testLocalTokenMergeDoesNotOverwriteRemoteQuotaWindows() {
+    func testLocalTokenMergePreservesOfficialAccountTotalsAndRemoteQuotaWindows() {
         let remote = UsageSnapshot(
             primary: LimitWindow(name: "primary", usedPercent: 3, windowMinutes: 300, resetsAt: 1_800_000_000),
             secondary: LimitWindow(name: "secondary", usedPercent: 77, windowMinutes: 10_080, resetsAt: 1_800_010_000),
@@ -140,6 +140,7 @@ final class UsageParsingTests: XCTestCase {
             cumulativeTokens: 10_000,
             inputTokens: nil,
             outputTokens: nil,
+            tokenUsageSource: "account",
             planType: "prolite",
             source: "remote",
             fetchedAt: 1_700_000_000
@@ -169,9 +170,66 @@ final class UsageParsingTests: XCTestCase {
         XCTAssertEqual(merged.contextWindow, 258_400)
         XCTAssertEqual(merged.totalTokens, 200)
         XCTAssertEqual(merged.lastTokens, 20)
-        XCTAssertEqual(merged.yesterdayTokens, 2_000)
-        XCTAssertEqual(merged.cumulativeTokens, 20_000)
+        XCTAssertEqual(merged.yesterdayTokens, 1_000)
+        XCTAssertEqual(merged.cumulativeTokens, 10_000)
         XCTAssertEqual(merged.inputTokens, 11)
         XCTAssertEqual(merged.outputTokens, 9)
+        XCTAssertEqual(merged.tokenUsageSource, "account")
+    }
+
+    func testAppServerUsageMatchesAccountProfileShape() throws {
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()).map { dayKey(for: $0) }!
+        let raw = try CodexAppServerClient.combine(
+            rateLimits: [
+                "rateLimits": [
+                    "primary": [
+                        "usedPercent": 10,
+                        "windowDurationMins": 300,
+                        "resetsAt": 1_800_000_000
+                    ],
+                    "secondary": [
+                        "usedPercent": 2,
+                        "windowDurationMins": 10_080,
+                        "resetsAt": 1_800_010_000
+                    ],
+                    "planType": "prolite"
+                ]
+            ],
+            tokenUsage: [
+                "summary": ["lifetimeTokens": 8_539_541_009],
+                "dailyUsageBuckets": [
+                    ["startDate": yesterday, "tokens": 18_797_368]
+                ]
+            ]
+        )
+
+        let snapshot = UsageStore().normalizeUsage(raw, source: "app-server")
+
+        XCTAssertEqual(snapshot.primary?.usedPercent, 10)
+        XCTAssertEqual(snapshot.secondary?.usedPercent, 2)
+        XCTAssertEqual(snapshot.primary?.windowMinutes, 300)
+        XCTAssertEqual(snapshot.secondary?.windowMinutes, 10_080)
+        XCTAssertEqual(snapshot.yesterdayTokens, 18_797_368)
+        XCTAssertEqual(snapshot.cumulativeTokens, 8_539_541_009)
+        XCTAssertEqual(snapshot.tokenUsageSource, "account")
+        XCTAssertEqual(snapshot.source, "app-server")
+    }
+
+    func testAppServerUsageOmitsAccountTotalsWhenProfileSummaryIsUnavailable() throws {
+        let raw = try CodexAppServerClient.combine(
+            rateLimits: [
+                "rateLimits": [
+                    "primary": [
+                        "usedPercent": 10,
+                        "windowDurationMins": 300,
+                        "resetsAt": 1_800_000_000
+                    ]
+                ]
+            ],
+            tokenUsage: [:]
+        )
+
+        XCTAssertNil(raw["token_stats"])
+        XCTAssertNotNil(raw["rate_limit"])
     }
 }

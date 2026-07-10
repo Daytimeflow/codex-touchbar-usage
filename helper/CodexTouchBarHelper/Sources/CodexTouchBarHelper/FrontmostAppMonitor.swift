@@ -35,11 +35,13 @@ final class FrontmostAppMonitor {
         let visible = candidates.contains { targetTokens.contains($0) }
         guard visible != lastValue else { return }
         lastValue = visible
-        NSLog(
-            "CodexTouchBarHelper: frontmost candidates=%@ visible=%@",
-            candidates.joined(separator: ","),
-            visible ? "true" : "false"
-        )
+        if ProcessInfo.processInfo.environment["CODEX_TOUCHBAR_DEBUG"] == "1" {
+            NSLog(
+                "CodexTouchBarHelper: frontmost candidates=%@ visible=%@",
+                candidates.joined(separator: ","),
+                visible ? "true" : "false"
+            )
+        }
         DispatchQueue.main.async {
             self.onChange(visible)
         }

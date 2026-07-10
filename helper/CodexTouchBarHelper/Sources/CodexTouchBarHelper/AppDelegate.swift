@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var remoteRefreshTimer: Timer?
     private var localRefreshTask: Task<Void, Never>?
     private var remoteRefreshTask: Task<Void, Never>?
+    private var cachePreloadTask: Task<Void, Never>?
     private var currentSnapshot: UsageSnapshot?
     private var isCodexFrontmost = false
     private let localRefreshInterval: TimeInterval = 3
@@ -28,10 +29,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         frontmostMonitor = monitor
         monitor.start()
+        preloadCachedUsage()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         stopRefresh()
+        cachePreloadTask?.cancel()
         touchBarController.hideImmediately()
     }
 
@@ -79,22 +82,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         localRefreshTask?.cancel()
         localRefreshTask = Task { [weak self] in
             guard let self else { return }
+            let snapshot = usageStore.resolveLocalTokenUsage()
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let currentSnapshot = self.currentSnapshot else { return }
+                let merged = currentSnapshot.mergingLocalTokenUsage(from: snapshot)
+                self.currentSnapshot = merged
+                self.touchBarController.update(merged)
+            }
+        }
+    }
 
-            do {
-                let snapshot = try await usageStore.resolveUsage(
-                    allowRemote: false,
-                    cacheMaxAge: 0,
-                    writeCache: false
-                )
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    guard let currentSnapshot = self.currentSnapshot else { return }
-                    let merged = currentSnapshot.mergingLocalTokenUsage(from: snapshot)
-                    self.currentSnapshot = merged
-                    self.touchBarController.update(merged)
+    private func preloadCachedUsage() {
+        cachePreloadTask = Task { [weak self] in
+            guard let self, let snapshot = try? usageStore.resolveCachedUsage() else { return }
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard self.currentSnapshot == nil else { return }
+                self.currentSnapshot = snapshot
+                if self.isCodexFrontmost {
+                    self.touchBarController.update(snapshot)
                 }
-            } catch {
-                NSLog("CodexTouchBarHelper: local refresh failed: \(error.localizedDescription)")
             }
         }
     }
@@ -108,7 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let snapshot = try await usageStore.resolveUsage(allowRemote: true, cacheMaxAge: 0)
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
-                    guard snapshot.source == "remote" || self.currentSnapshot == nil else {
+                    guard snapshot.source == "app-server" || snapshot.source == "remote" || self.currentSnapshot == nil else {
                         return
                     }
                     self.currentSnapshot = snapshot
@@ -121,7 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func targetApplicationNames() -> Set<String> {
-        let raw = ProcessInfo.processInfo.environment["CODEX_TOUCHBAR_TARGET_APPS"] ?? "Codex,com.openai.codex"
+        let raw = ProcessInfo.processInfo.environment["CODEX_TOUCHBAR_TARGET_APPS"] ?? "Codex,ChatGPT,com.openai.codex"
         return Set(
             raw
                 .split(separator: ",")

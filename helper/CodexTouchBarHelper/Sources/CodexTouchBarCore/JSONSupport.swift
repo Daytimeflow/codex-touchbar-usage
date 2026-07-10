@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 typealias JSONObject = [String: Any]
 
@@ -96,12 +97,24 @@ func parseEventDate(_ timestamp: Any?, fallbackModificationDate: Date) -> Date {
 }
 
 func modificationDate(for url: URL) -> Date {
-    ((try? FileManager.default.attributesOfItem(atPath: url.path)[.modificationDate]) as? Date) ?? .distantPast
+    guard let metadata = fileMetadata(for: url) else { return .distantPast }
+    let seconds = TimeInterval(metadata.st_mtimespec.tv_sec)
+    let nanoseconds = TimeInterval(metadata.st_mtimespec.tv_nsec) / 1_000_000_000
+    return Date(timeIntervalSince1970: seconds + nanoseconds)
 }
 
 func fileSize(for url: URL) -> UInt64 {
-    let value = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size]) as? NSNumber
-    return value?.uint64Value ?? 0
+    guard let metadata = fileMetadata(for: url), metadata.st_size >= 0 else { return 0 }
+    return UInt64(metadata.st_size)
+}
+
+private func fileMetadata(for url: URL) -> stat? {
+    var metadata = stat()
+    let result: Int32 = url.withUnsafeFileSystemRepresentation { path in
+        guard let path else { return Int32(-1) }
+        return Darwin.lstat(path, &metadata)
+    }
+    return result == 0 ? metadata : nil
 }
 
 func jsonlFiles(under root: URL) -> [URL] {

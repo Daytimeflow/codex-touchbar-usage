@@ -57,7 +57,7 @@
 
 - 带 Touch Bar 的 MacBook Pro
 - macOS 12 或更新版本
-- 已安装 Codex 桌面应用
+- 已安装最新版 Codex / ChatGPT 桌面应用（新版外壳仍使用 Codex 服务）
 - 已登录 Codex，且本机存在 `~/.codex/auth.json`
 - Swift toolchain：完整 Xcode 或 Command Line Tools 均可
 
@@ -128,9 +128,9 @@ git pull
 
 | 数据 | 来源 |
 | --- | --- |
-| 额度余额 / 重置时间 | Codex usage endpoint，经 `~/.codex/auth.json` 中的 access token 鉴权 |
-| 最近 token 信息 | 本地 Codex session JSONL |
-| 昨日 / 累计 token | 本地 `last_token_usage.total_tokens` 增量统计 |
+| 额度余额 / 重置时间 | Codex 官方 app-server `account/rateLimits/read` |
+| 昨日 / 累计 token | Codex 官方 app-server `account/usage/read`，与个人资料页同口径 |
+| 本地降级 | Codex session JSONL 与 usage cache；官方数据不可用时启用 |
 | 缓存 | `~/.codex/touchbar-usage/` |
 
 隐私原则：
@@ -138,7 +138,7 @@ git pull
 - 不上传本地 session 内容；
 - 不记录或打印 access token；
 - helper 隐藏时不刷新 UI、不请求网络；
-- 远程请求仅用于额度余额和重置时间。
+- app-server 只在刷新官方数据时短暂启动，读取完成立即退出，不增加常驻进程。
 
 ## 常用命令
 
@@ -198,14 +198,24 @@ launchctl print gui/$(id -u)/com.local.codex-touchbar-helper
 LaunchAgent 默认匹配：
 
 ```text
-Codex,com.openai.codex
+Codex,ChatGPT,com.openai.codex
 ```
 
 如果你使用的是改名版 Codex，可修改 LaunchAgent 中的 `CODEX_TOUCHBAR_TARGET_APPS`。
 
+### 会占用多少存储空间？需要定期清理吗？
+
+helper 自身只在 `~/.codex/touchbar-usage/` 保存小型缓存和诊断日志，通常是 MB 级；安装脚本会轮换超过 2 MB 的 helper 日志。`~/.codex/sessions/` 属于 Codex 的任务历史，不是本插件创建的，删除后会影响历史任务和上下文恢复，因此不要为了清理插件而删除它。
+
+可以分别检查两者大小：
+
+```bash
+du -sh ~/.codex/touchbar-usage ~/.codex/sessions
+```
+
 ### token 用量为什么不是实时逐字跳动？
 
-Codex 通常在一次回复或任务完成后把 token usage 写入本地 JSONL。helper 会约每 3 秒读取增量，所以写入后会很快更新，但不会在模型输出每个字时变化。
+右侧数值采用 Codex 个人资料页的官方账户统计，helper 约每 30 秒刷新一次。官方统计本身可能批量更新，因此不会随模型输出逐字变化；本地 JSONL 增量只在官方统计不可用时作为降级数据。
 
 ## 开发
 
