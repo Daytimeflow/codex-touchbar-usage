@@ -1,0 +1,55 @@
+<svg width="1280" height="560" viewBox="0 0 1280 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07100B"/>
+      <stop offset="0.45" stop-color="#101914"/>
+      <stop offset="1" stop-color="#1A241D"/>
+    </linearGradient>
+    <linearGradient id="touchbar" x1="118" y1="204" x2="1162" y2="280" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#080A09"/>
+      <stop offset="0.7" stop-color="#121512"/>
+      <stop offset="1" stop-color="#242924"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="1280" height="560" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="30" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="560" rx="44" fill="url(#bg)"/>
+  <circle cx="1042" cy="86" r="180" fill="#BFFF45" opacity="0.07"/>
+  <circle cx="194" cy="474" r="220" fill="#84FFB0" opacity="0.055"/>
+
+  <text x="640" y="86" text-anchor="middle" fill="#F5F6F1" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="44" font-weight="750">Codex Touch Bar Usage</text>
+  <text x="640" y="126" text-anchor="middle" fill="#BFC8BE" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20">Switch to Codex and the usage panel appears</text>
+
+  <g filter="url(#shadow)">
+    <rect x="90" y="178" width="1100" height="144" rx="26" fill="#0A0D0B"/>
+    <rect x="118" y="204" width="1044" height="76" rx="18" fill="url(#touchbar)" stroke="#303730"/>
+    <rect x="118" y="204" width="1044" height="34" rx="17" fill="white" opacity="0.025"/>
+
+    <text x="148" y="251" fill="#7E877E" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="19" font-weight="650">Other app focused</text>
+
+    <g transform="translate(895 218)">
+      <rect x="0" y="0" width="52" height="48" rx="12" fill="#242925" stroke="#383F39"/>
+      <circle cx="26" cy="24" r="8" stroke="#E9ECE8" stroke-width="2"/>
+      <path d="M26 8V13M26 35V40M10 24H15M37 24H42M15 13L19 17M33 31L37 35M37 13L33 17M19 31L15 35" stroke="#E9ECE8" stroke-width="2" stroke-linecap="round"/>
+
+      <rect x="64" y="0" width="52" height="48" rx="12" fill="#242925" stroke="#383F39"/>
+      <path d="M80 28H87L96 36V12L87 20H80V28Z" stroke="#E9ECE8" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M102 19C105 22 105 26 102 29" stroke="#E9ECE8" stroke-width="2" stroke-linecap="round"/>
+
+      <rect x="128" y="0" width="52" height="48" rx="12" fill="#242925" stroke="#383F39"/>
+      <path d="M144 28H151L160 36V12L151 20H144V28Z" stroke="#E9ECE8" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M166 17C171 21 171 27 166 31" stroke="#E9ECE8" stroke-width="2" stroke-linecap="round"/>
+
+      <rect x="192" y="0" width="52" height="48" rx="12" fill="#242925" stroke="#383F39"/>
+      <path d="M207 19H229M207 25H229M207 31H229" stroke="#E9ECE8" stroke-width="2" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <g transform="translate(405 390)">
+    <rect x="0" y="0" width="470" height="54" rx="27" fill="#151E17" stroke="#2E3B30"/>
+    <circle cx="33" cy="27" r="11" fill="#667066"/>
+    <text x="58" y="35" fill="#D6DDD3" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="18" font-weight="650">System controls remain available outside Codex</text>
+  </g>
+</svg>

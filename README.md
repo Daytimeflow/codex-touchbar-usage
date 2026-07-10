@@ -16,18 +16,21 @@
 <div align="center">
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-111?style=flat-square)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Daytimeflow/codex-touchbar-usage?style=flat-square&color=8DFF55)](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest)
 [![macOS](https://img.shields.io/badge/macOS-Touch%20Bar-111?style=flat-square&logo=apple)](#系统要求)
 [![Swift](https://img.shields.io/badge/Swift-native%20AppKit-F05138?style=flat-square&logo=swift&logoColor=white)](helper/CodexTouchBarHelper)
 [![Codex](https://img.shields.io/badge/Codex-Touch%20Bar%20Plugin-8DFF55?style=flat-square)](#功能)
-[![Usage](https://img.shields.io/badge/usage-quota%20%2B%20tokens-111?style=flat-square)](#数据来源)
+[![Homebrew](https://img.shields.io/badge/Homebrew-tap-FBB040?style=flat-square&logo=homebrew&logoColor=111)](#安装)
 
 </div>
 
-![Codex Touch Bar Usage preview](assets/preview.svg)
+![Codex Touch Bar Usage 动态效果](assets/demo.gif)
+
+<p align="center"><sub>聚焦 Codex 时显示额度与 token 用量；切换到其他 App 后自动恢复系统控制条。</sub></p>
 
 ## 概述
 
-**Codex Touch Bar Usage** 是一个面向 Codex heavy user 的 Touch Bar 插件：把最容易焦虑的 Codex 用量信息直接放到键盘上方。
+**Codex Touch Bar Usage** 是一个专为 Codex 高频用户打造的原生 Touch Bar 插件，把最常查看的 Codex 用量信息直接放到键盘上方。
 
 当 Codex 成为前台 App 时，它会临时接管 Touch Bar 展示一条紧凑的用量面板；切走到其他 App 后自动隐藏，系统亮度、音量等控制条会恢复。
 
@@ -42,7 +45,17 @@
 | 1 周额度 | 余额胶囊条、余额百分比、重置时间 |
 | token 用量 | 昨日 token、累计 token，按 `万` / `亿` 格式显示 |
 | 前台感知 | 只在 Codex 聚焦时显示，切走后隐藏 |
-| 轻量刷新 | 本地 token 约 3 秒刷新；远程额度约 30 秒刷新；隐藏时停止刷新 |
+| 轻量刷新 | 官方额度与 token 数据约 30 秒刷新；隐藏时停止刷新；本地统计仅在官方数据不可用时降级启用 |
+
+## 为什么是它
+
+| 设计重点 | Codex Touch Bar Usage |
+| --- | --- |
+| Codex 专属 | 围绕 5 小时 / 1 周额度、重置时间、昨日 / 累计 token 设计，不做无关仪表盘 |
+| 官方账户口径 | 优先读取 Codex 官方 app-server 数据，token 数值与个人资料页保持同一口径 |
+| 前台即用 | 只在 Codex / ChatGPT 位于前台时显示，切走后恢复亮度、音量等系统控制 |
+| 原生轻量 | Swift + AppKit 单一自绘视图，无 Electron / WebView；前台切换由系统事件驱动，隐藏时零刷新 |
+| 信息完整 | 余额胶囊条支持部分填充，同时展示余额百分比、统一重置时间和账户 token 用量 |
 
 ## 适合谁
 
@@ -64,6 +77,34 @@
 > 说明：当前项目使用 macOS 私有的 system-modal Touch Bar 能力，目标是本机自用与开源学习，不以 App Store 分发兼容为目标。
 
 ## 安装
+
+### Homebrew（推荐）
+
+```bash
+brew install daytimeflow/tap/codex-touchbar-usage && brew services start daytimeflow/tap/codex-touchbar-usage
+```
+
+升级：
+
+```bash
+brew update
+brew upgrade codex-touchbar-usage
+```
+
+### GitHub Release（Apple Silicon）
+
+从 [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest) 下载 `CodexTouchBarUsage-v0.3.0-arm64.zip` 和对应的 `.sha256`：
+
+```bash
+shasum -a 256 -c CodexTouchBarUsage-v0.3.0-arm64.zip.sha256
+unzip CodexTouchBarUsage-v0.3.0-arm64.zip
+cd CodexTouchBarUsage-v0.3.0-arm64
+./install.sh
+```
+
+预构建包采用 ad-hoc 签名，暂未经过 Apple notarization。如果 Gatekeeper 阻止启动，优先使用 Homebrew 或源码安装。
+
+### 源码安装
 
 ```bash
 git clone https://github.com/Daytimeflow/codex-touchbar-usage.git
@@ -105,12 +146,36 @@ state = running
 
 ## 更新
 
+Homebrew 安装：
+
+```bash
+brew update
+brew upgrade codex-touchbar-usage
+```
+
+源码安装：
+
 ```bash
 git pull
 ./scripts/install_touchbar_helper.sh
 ```
 
 ## 卸载
+
+Homebrew 安装：
+
+```bash
+brew services stop daytimeflow/tap/codex-touchbar-usage
+brew uninstall codex-touchbar-usage
+```
+
+Release 安装（在解压目录中）：
+
+```bash
+./uninstall.sh
+```
+
+源码安装（在仓库目录中）：
 
 ```bash
 ./scripts/uninstall_touchbar_helper.sh
@@ -236,7 +301,8 @@ swift test
 
 ## 路线图
 
-- [ ] 发布预构建 `.app` release 包
+- [x] 发布 Apple Silicon 预构建 `.app` Release
+- [x] 支持 Homebrew Tap 一行安装
 - [ ] 增加菜单栏状态入口
 - [ ] 增加可配置刷新间隔
 - [ ] 增加更多 Codex surface 的 token 统计维度
@@ -252,7 +318,3 @@ swift test
 | 支付宝 | 微信 |
 | --- | --- |
 | <img src="assets/sponsor/alipay.jpeg" alt="支付宝收款码" width="220"> | <img src="assets/sponsor/wechat.jpeg" alt="微信收款码" width="220"> |
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Daytimeflow/codex-touchbar-usage&type=Date)](https://star-history.com/#Daytimeflow/codex-touchbar-usage&Date)
