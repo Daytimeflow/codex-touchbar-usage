@@ -103,6 +103,47 @@ public struct UsageSnapshot: Codable, Equatable {
             error: error
         )
     }
+
+    public func stabilizingQuota(from incoming: UsageSnapshot, now: Int = Int(Date().timeIntervalSince1970)) -> UsageSnapshot {
+        UsageSnapshot(
+            primary: stableLimitWindow(current: primary, incoming: incoming.primary, now: now),
+            secondary: stableLimitWindow(current: secondary, incoming: incoming.secondary, now: now),
+            contextWindow: incoming.contextWindow ?? contextWindow,
+            totalTokens: incoming.totalTokens ?? totalTokens,
+            lastTokens: incoming.lastTokens ?? lastTokens,
+            yesterdayTokens: incoming.yesterdayTokens ?? yesterdayTokens,
+            cumulativeTokens: incoming.cumulativeTokens ?? cumulativeTokens,
+            inputTokens: incoming.inputTokens ?? inputTokens,
+            outputTokens: incoming.outputTokens ?? outputTokens,
+            tokenUsageSource: incoming.tokenUsageSource ?? tokenUsageSource,
+            planType: incoming.planType ?? planType,
+            source: incoming.source,
+            fetchedAt: incoming.fetchedAt,
+            error: incoming.error
+        )
+    }
+}
+
+private func stableLimitWindow(current: LimitWindow?, incoming: LimitWindow?, now: Int) -> LimitWindow? {
+    guard let current else { return incoming }
+    guard var incoming else { return current }
+    guard let currentUsed = current.usedPercent else { return incoming }
+    guard let incomingUsed = incoming.usedPercent else { return current }
+
+    if let currentReset = current.resetsAt {
+        if now >= currentReset {
+            guard let incomingReset = incoming.resetsAt, incomingReset > now else {
+                return current
+            }
+            return incoming
+        }
+
+        guard incomingUsed >= currentUsed else { return current }
+        incoming.resetsAt = currentReset
+        return incoming
+    }
+
+    return incomingUsed >= currentUsed ? incoming : current
 }
 
 public struct TokenStats: Codable, Equatable {

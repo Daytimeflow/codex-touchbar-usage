@@ -54,10 +54,7 @@ public final class UsageStore {
                     errors.append("remote: skipped all-zero usage snapshot")
                 } else {
                     if writeCache {
-                        try? writeJSONObject(
-                            ["raw": raw, "source": remote.source, "fetched_at": snapshot.fetchedAt],
-                            to: configuration.cacheFile
-                        )
+                        writeRemoteCacheIfStable(raw: raw, source: remote.source, snapshot: snapshot)
                     }
                     return snapshot
                 }
@@ -99,8 +96,7 @@ public final class UsageStore {
     }
 
     public func resolveCachedUsage() throws -> UsageSnapshot {
-        let raw = try loadCachedRaw()
-        return normalizeUsage(raw, source: "cache")
+        try loadCachedSnapshot()
     }
 
     public func resolveLocalTokenUsage() -> UsageSnapshot {
@@ -199,7 +195,7 @@ public final class UsageStore {
         request.timeoutInterval = configuration.requestTimeout
         request.setValue("Bearer \(auth.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("codex-touchbar-usage-native/0.3", forHTTPHeaderField: "User-Agent")
+        request.setValue("codex-touchbar-usage-native/0.3.1", forHTTPHeaderField: "User-Agent")
         if let accountID = auth.accountID {
             request.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-ID")
         }
@@ -334,6 +330,28 @@ public final class UsageStore {
     private func loadCachedRaw() throws -> JSONObject {
         let object = try readJSONObject(from: configuration.cacheFile)
         return (object["raw"] as? JSONObject) ?? object
+    }
+
+    private func loadCachedSnapshot() throws -> UsageSnapshot {
+        let object = try readJSONObject(from: configuration.cacheFile)
+        let raw = (object["raw"] as? JSONObject) ?? object
+        let source = stringValue(object["source"]) ?? "cache"
+        return normalizeUsage(raw, source: source)
+    }
+
+    private func writeRemoteCacheIfStable(raw: JSONObject, source: String, snapshot: UsageSnapshot) {
+        if let cached = try? loadCachedSnapshot(),
+           ["app-server", "remote"].contains(cached.source) {
+            let stabilized = cached.stabilizingQuota(from: snapshot, now: snapshot.fetchedAt)
+            guard stabilized.primary == snapshot.primary, stabilized.secondary == snapshot.secondary else {
+                return
+            }
+        }
+
+        try? writeJSONObject(
+            ["raw": raw, "source": source, "fetched_at": snapshot.fetchedAt],
+            to: configuration.cacheFile
+        )
     }
 
     private func limitFromDictionary(name: String, payload: Any?) -> LimitWindow? {

@@ -17,6 +17,7 @@ test, modify, or troubleshoot the `codex-touchbar-usage` local plugin.
 - Quota balance and reset times come from `account/rateLimits/read`; yesterday/lifetime tokens come from `account/usage/read` so they match the profile page.
 - `~/.codex/auth.json`, local session `rate_limits`, and incremental `last_token_usage` stats are fallback sources only.
 - While Codex or the ChatGPT Codex shell is frontmost, official account data refreshes every 30 seconds. Local fallback data is checked between official refreshes but cannot replace valid account totals.
+- Within an active quota window, non-monotonic official snapshots are stabilized so stale percentages cannot replace newer usage; a lower percentage is accepted only after the previous reset time has passed.
 - `scripts/install_touchbar_helper.sh` builds the helper and registers a LaunchAgent.
 
 ## Common Commands

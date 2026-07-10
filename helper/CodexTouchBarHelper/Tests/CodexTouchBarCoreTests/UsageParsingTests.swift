@@ -232,4 +232,116 @@ final class UsageParsingTests: XCTestCase {
         XCTAssertNil(raw["token_stats"])
         XCTAssertNotNil(raw["rate_limit"])
     }
+
+    func testRemoteQuotaStabilizationRejectsRegressionWithinActiveWindow() {
+        let current = UsageSnapshot(
+            primary: LimitWindow(name: "primary", usedPercent: 30, windowMinutes: 300, resetsAt: 2_000),
+            secondary: LimitWindow(name: "secondary", usedPercent: 5, windowMinutes: 10_080, resetsAt: 8_000),
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: 100,
+            cumulativeTokens: 1_000,
+            inputTokens: nil,
+            outputTokens: nil,
+            tokenUsageSource: "account",
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_000
+        )
+        let regressed = UsageSnapshot(
+            primary: LimitWindow(name: "primary", usedPercent: 8, windowMinutes: 300, resetsAt: 2_001),
+            secondary: LimitWindow(name: "secondary", usedPercent: 1, windowMinutes: 10_080, resetsAt: 8_000),
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: 120,
+            cumulativeTokens: 1_200,
+            inputTokens: nil,
+            outputTokens: nil,
+            tokenUsageSource: "account",
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_100
+        )
+
+        let stabilized = current.stabilizingQuota(from: regressed, now: 1_500)
+
+        XCTAssertEqual(stabilized.primary, current.primary)
+        XCTAssertEqual(stabilized.secondary, current.secondary)
+        XCTAssertEqual(stabilized.yesterdayTokens, 120)
+        XCTAssertEqual(stabilized.cumulativeTokens, 1_200)
+        XCTAssertEqual(stabilized.fetchedAt, regressed.fetchedAt)
+    }
+
+    func testRemoteQuotaStabilizationAcceptsRealResetAfterWindowExpires() {
+        let current = UsageSnapshot(
+            primary: LimitWindow(name: "primary", usedPercent: 98, windowMinutes: 300, resetsAt: 2_000),
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            tokenUsageSource: "account",
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_900
+        )
+        let reset = UsageSnapshot(
+            primary: LimitWindow(name: "primary", usedPercent: 2, windowMinutes: 300, resetsAt: 20_000),
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            tokenUsageSource: "account",
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 2_100
+        )
+
+        let stabilized = current.stabilizingQuota(from: reset, now: 2_100)
+
+        XCTAssertEqual(stabilized.primary, reset.primary)
+    }
+
+    func testCachedUsagePreservesOfficialSourceForStartupStabilization() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("codex-touchbar-cache-source-\(UUID().uuidString)")
+        let cacheFile = directory.appendingPathComponent("usage-cache.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        try writeJSONObject(
+            [
+                "source": "app-server",
+                "fetched_at": 1_000,
+                "raw": [
+                    "rate_limit": [
+                        "primary_window": [
+                            "used_percent": 30,
+                            "limit_window_seconds": 18_000,
+                            "reset_at": 2_000
+                        ]
+                    ]
+                ]
+            ],
+            to: cacheFile
+        )
+        let configuration = UsageStoreConfiguration(
+            codexHome: directory,
+            cacheFile: cacheFile,
+            tokenStatsCacheFile: directory.appendingPathComponent("token-cache.json")
+        )
+
+        let snapshot = try UsageStore(configuration: configuration).resolveCachedUsage()
+
+        XCTAssertEqual(snapshot.source, "app-server")
+        XCTAssertEqual(snapshot.primary?.usedPercent, 30)
+    }
 }

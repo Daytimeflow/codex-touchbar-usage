@@ -67,7 +67,7 @@ final class CodexAppServerClient {
                     "clientInfo": [
                         "name": "codex_touchbar_usage",
                         "title": "Codex Touch Bar Usage",
-                        "version": "0.3.0"
+                        "version": "0.3.1"
                     ]
                 ]
             ],

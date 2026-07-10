@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var remoteRefreshTask: Task<Void, Never>?
     private var cachePreloadTask: Task<Void, Never>?
     private var currentSnapshot: UsageSnapshot?
+    private var lastOfficialSnapshot: UsageSnapshot?
     private var isCodexFrontmost = false
     private let localRefreshInterval: TimeInterval = 3
     private let remoteRefreshInterval: TimeInterval = 30
@@ -100,6 +101,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             await MainActor.run {
                 guard self.currentSnapshot == nil else { return }
                 self.currentSnapshot = snapshot
+                if snapshot.source == "app-server" || snapshot.source == "remote" {
+                    self.lastOfficialSnapshot = snapshot
+                }
                 if self.isCodexFrontmost {
                     self.touchBarController.update(snapshot)
                 }
@@ -119,8 +123,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     guard snapshot.source == "app-server" || snapshot.source == "remote" || self.currentSnapshot == nil else {
                         return
                     }
-                    self.currentSnapshot = snapshot
-                    self.touchBarController.update(snapshot)
+                    let stabilized = self.lastOfficialSnapshot?.stabilizingQuota(from: snapshot) ?? snapshot
+                    self.lastOfficialSnapshot = stabilized
+                    self.currentSnapshot = stabilized
+                    self.touchBarController.update(stabilized)
                 }
             } catch {
                 NSLog("CodexTouchBarHelper: remote refresh failed: \(error.localizedDescription)")
