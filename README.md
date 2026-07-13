@@ -41,8 +41,8 @@
 | 模块 | 显示内容 |
 | --- | --- |
 | 标识 | `Codex` 白色斜体标题 |
-| 5 小时额度 | 余额胶囊条、余额百分比、重置时间 |
-| 1 周额度 | 余额胶囊条、余额百分比、重置时间 |
+| 主额度 | 自动识别官方窗口时长，显示余额胶囊条、余额百分比、重置时间 |
+| 附加模型额度 | 自动识别 Spark 等模型独立额度；旧账号仍兼容 5 小时 / 1 周双窗口 |
 | token 用量 | 昨日 token、累计 token，按 `万` / `亿` 格式显示 |
 | 前台感知 | 只在 Codex 聚焦时显示，切走后隐藏 |
 | 轻量刷新 | 官方额度与 token 数据约 30 秒刷新；隐藏时停止刷新；本地统计仅在官方数据不可用时降级启用 |
@@ -51,7 +51,7 @@
 
 | 设计重点 | Codex Touch Bar Usage |
 | --- | --- |
-| Codex 专属 | 围绕 5 小时 / 1 周额度、重置时间、昨日 / 累计 token 设计，不做无关仪表盘 |
+| Codex 专属 | 围绕官方主额度、模型附加额度、重置时间、昨日 / 累计 token 设计，不做无关仪表盘 |
 | 官方账户口径 | 优先读取 Codex 官方 app-server 数据，token 数值与个人资料页保持同一口径 |
 | 前台即用 | 只在 Codex / ChatGPT 位于前台时显示，切走后恢复亮度、音量等系统控制 |
 | 原生轻量 | Swift + AppKit 单一自绘视图，无 Electron / WebView；前台切换由系统事件驱动，隐藏时零刷新 |
@@ -60,7 +60,7 @@
 ## 适合谁
 
 - 每天长时间使用 Codex / Codex CLI / Codex Desktop 的用户；
-- 想随时知道 5 小时额度和 1 周额度还剩多少的人；
+- 想随时知道 Codex 主额度和 Spark 等模型附加额度还剩多少的人；
 - 想看昨日和累计 token 消耗，但不想频繁打开个人资料页的人；
 - 还在用带 Touch Bar 的 MacBook Pro，想让这条屏幕重新有点存在感的人。
 
@@ -95,12 +95,12 @@ brew upgrade --cask codex-touchbar-usage
 
 ### GitHub Release（Apple Silicon）
 
-从 [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest) 下载 `CodexTouchBarUsage-v0.3.4-arm64.zip` 和对应的 `.sha256`：
+从 [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest) 下载 `CodexTouchBarUsage-v0.3.5-arm64.zip` 和对应的 `.sha256`：
 
 ```bash
-shasum -a 256 -c CodexTouchBarUsage-v0.3.4-arm64.zip.sha256
-unzip CodexTouchBarUsage-v0.3.4-arm64.zip
-cd CodexTouchBarUsage-v0.3.4-arm64
+shasum -a 256 -c CodexTouchBarUsage-v0.3.5-arm64.zip.sha256
+unzip CodexTouchBarUsage-v0.3.5-arm64.zip
+cd CodexTouchBarUsage-v0.3.5-arm64
 ./install.sh
 ```
 

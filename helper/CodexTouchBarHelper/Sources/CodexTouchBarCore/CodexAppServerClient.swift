@@ -63,24 +63,7 @@ final class CodexAppServerClient {
         }
 
         try process.run()
-        let messages: [JSONObject] = [
-            [
-                "method": "initialize",
-                "id": 0,
-                "params": [
-                    "clientInfo": [
-                        "name": "codex_touchbar_usage",
-                        "title": "Codex Touch Bar Usage",
-                        "version": "0.3.4"
-                    ]
-                ]
-            ],
-            ["method": "initialized", "params": JSONObject()],
-            ["method": "account/read", "id": 1, "params": ["refreshToken": true]],
-            ["method": "account/rateLimits/read", "id": 2, "params": JSONObject()],
-            ["method": "account/usage/read", "id": 3, "params": JSONObject()]
-        ]
-        for message in messages {
+        for message in Self.requestMessages() {
             var data = try JSONSerialization.data(withJSONObject: message)
             data.append(10)
             try input.fileHandleForWriting.write(contentsOf: data)
@@ -106,18 +89,41 @@ final class CodexAppServerClient {
         return try Self.combine(rateLimits: rateLimits, tokenUsage: responses.2 ?? [:])
     }
 
+    static func requestMessages() -> [JSONObject] {
+        [
+            [
+                "method": "initialize",
+                "id": 0,
+                "params": [
+                    "clientInfo": [
+                        "name": "codex_touchbar_usage",
+                        "title": "Codex Touch Bar Usage",
+                        "version": "0.3.5"
+                    ]
+                ]
+            ],
+            ["method": "initialized", "params": JSONObject()],
+            ["method": "account/rateLimits/read", "id": 2, "params": JSONObject()],
+            ["method": "account/usage/read", "id": 3, "params": JSONObject()]
+        ]
+    }
+
     static func combine(rateLimits: JSONObject, tokenUsage: JSONObject) throws -> JSONObject {
         guard let limits = rateLimits["rateLimits"] as? JSONObject else {
             throw UsageError.noUsableUsage("Codex app-server returned no rate limits")
         }
 
+        let mainLimitID = stringValue(limits["limitId"])
+        let mainLimitName = stringValue(limits["limitName"]) ?? mainLimitID
         var raw: JSONObject = ["plan_type": limits["planType"] ?? ""]
         var apiRateLimit: JSONObject = [:]
-        if let primary = appServerWindow(limits["primary"]) {
+        if let primary = appServerWindow(limits["primary"], name: mainLimitName ?? "primary") {
             apiRateLimit["primary_window"] = primary
         }
-        if let secondary = appServerWindow(limits["secondary"]) {
+        if let secondary = appServerWindow(limits["secondary"], name: mainLimitName ?? "secondary") {
             apiRateLimit["secondary_window"] = secondary
+        } else if let additional = additionalAppServerWindow(rateLimits, excluding: mainLimitID) {
+            apiRateLimit["secondary_window"] = additional
         }
         raw["rate_limit"] = apiRateLimit
 
@@ -138,14 +144,33 @@ final class CodexAppServerClient {
         return raw
     }
 
-    private static func appServerWindow(_ value: Any?) -> JSONObject? {
+    private static func appServerWindow(_ value: Any?, name: String) -> JSONObject? {
         guard let window = value as? JSONObject else { return nil }
         let minutes = intValue(window["windowDurationMins"])
         return [
+            "name": name,
             "used_percent": doubleValue(window["usedPercent"]) ?? 0,
             "limit_window_seconds": (minutes ?? 0) * 60,
             "reset_at": intValue(window["resetsAt"]) ?? 0
         ]
+    }
+
+    private static func additionalAppServerWindow(_ response: JSONObject, excluding mainLimitID: String?) -> JSONObject? {
+        guard let byID = response["rateLimitsByLimitId"] as? JSONObject else { return nil }
+        var candidateIDs = byID.keys.filter { $0 != mainLimitID && $0 != "codex" }.sorted()
+        if let preferredIndex = candidateIDs.firstIndex(of: "codex_bengalfox") {
+            candidateIDs.insert(candidateIDs.remove(at: preferredIndex), at: 0)
+        }
+
+        for identifier in candidateIDs {
+            guard let limit = byID[identifier] as? JSONObject else { continue }
+            let name = stringValue(limit["limitName"]) ?? stringValue(limit["limitId"]) ?? identifier
+            if let window = appServerWindow(limit["primary"], name: name)
+                ?? appServerWindow(limit["secondary"], name: name) {
+                return window
+            }
+        }
+        return nil
     }
 
     private static func findCodexExecutable() -> URL? {

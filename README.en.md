@@ -41,8 +41,8 @@ It is not Electron, not a WebView, and not a fragile pile of separate Touch Bar 
 | Module | What it shows |
 | --- | --- |
 | Identity | White italic `Codex` title |
-| 5-hour quota | Balance capsule bar, remaining amount, reset time |
-| 1-week quota | Balance capsule bar, remaining amount, reset time |
+| Main quota | Automatically detects the official window duration and shows balance capsules, remaining amount, and reset time |
+| Model-specific quota | Detects independent limits such as Spark; legacy 5-hour / 1-week dual windows remain supported |
 | Token usage | Yesterday's tokens and lifetime tokens, formatted in `万` / `亿` units |
 | Frontmost app awareness | Shows only when Codex is focused, hides when you switch away |
 | Lightweight refresh | Official quota and token data refresh about every 30 seconds; refresh stops while hidden; local stats are fallback-only |
@@ -51,7 +51,7 @@ It is not Electron, not a WebView, and not a fragile pile of separate Touch Bar 
 
 | Design priority | Codex Touch Bar Usage |
 | --- | --- |
-| Codex-first | Built around 5-hour / 1-week quota, reset times, and yesterday / lifetime tokens instead of a generic dashboard |
+| Codex-first | Built around official main quota, model-specific limits, reset times, and yesterday / lifetime tokens instead of a generic dashboard |
 | Official account totals | Prefers the official Codex app-server data, matching the token totals shown on the profile page |
 | Focus-aware | Appears only while Codex / ChatGPT is frontmost, then restores brightness, volume, and other system controls |
 | Native and lightweight | One Swift + AppKit custom view with no Electron / WebView; app focus is event-driven and refresh stops while hidden |
@@ -60,7 +60,7 @@ It is not Electron, not a WebView, and not a fragile pile of separate Touch Bar 
 ## Who Is This For
 
 - People who use Codex, Codex CLI, or Codex Desktop for long sessions every day;
-- People who want to know how much 5-hour and 1-week quota is still available;
+- People who want to know how much main Codex and model-specific quota such as Spark is still available;
 - People who want yesterday and lifetime token usage without opening the profile page repeatedly;
 - People with a Touch Bar MacBook Pro who want that strip to be useful again.
 
@@ -95,12 +95,12 @@ brew upgrade --cask codex-touchbar-usage
 
 ### GitHub Release (Apple Silicon)
 
-Download `CodexTouchBarUsage-v0.3.4-arm64.zip` and its `.sha256` file from [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest):
+Download `CodexTouchBarUsage-v0.3.5-arm64.zip` and its `.sha256` file from [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest):
 
 ```bash
-shasum -a 256 -c CodexTouchBarUsage-v0.3.4-arm64.zip.sha256
-unzip CodexTouchBarUsage-v0.3.4-arm64.zip
-cd CodexTouchBarUsage-v0.3.4-arm64
+shasum -a 256 -c CodexTouchBarUsage-v0.3.5-arm64.zip.sha256
+unzip CodexTouchBarUsage-v0.3.5-arm64.zip
+cd CodexTouchBarUsage-v0.3.5-arm64
 ./install.sh
 ```
 

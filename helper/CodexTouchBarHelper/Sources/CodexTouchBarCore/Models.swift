@@ -127,6 +127,7 @@ public struct UsageSnapshot: Codable, Equatable {
 private func stableLimitWindow(current: LimitWindow?, incoming: LimitWindow?, now: Int) -> LimitWindow? {
     guard let current else { return incoming }
     guard var incoming else { return current }
+    guard current.name == incoming.name, current.windowMinutes == incoming.windowMinutes else { return incoming }
     guard let currentUsed = current.usedPercent else { return incoming }
     guard let incomingUsed = incoming.usedPercent else { return current }
 

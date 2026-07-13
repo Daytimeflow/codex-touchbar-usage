@@ -14,11 +14,12 @@ test, modify, or troubleshoot the `codex-touchbar-usage` local plugin.
 - The helper uses an AppKit `NSTouchBar` system modal view and only presents it while Codex is frontmost.
 - Frontmost app changes are event-driven through `NSWorkspace.didActivateApplicationNotification`.
 - `CodexTouchBarCore` briefly invokes the installed Codex/ChatGPT app-server for official quota and account token usage, then exits it after each refresh.
-- Quota balance and reset times come from `account/rateLimits/read`; yesterday/lifetime tokens come from `account/usage/read` so they match the profile page.
+- Quota balance and reset times come from `account/rateLimits/read`; both legacy primary/secondary windows and current `rateLimitsByLimitId` model-specific limits are supported. Yesterday/lifetime tokens come from `account/usage/read` so they match the profile page.
 - Official app-server access uses the Codex CLI credentials in `~/.codex/auth.json`; local session `rate_limits` and incremental `last_token_usage` stats are fallback sources only.
 - While Codex or the ChatGPT Codex shell is frontmost, official account data refreshes every 30 seconds. Local fallback data is checked between official refreshes but cannot replace valid account totals.
 - Within an active quota window, stale percentages cannot replace newer usage; a lower percentage is accepted after the previous reset time passes or a materially later reset timestamp identifies a new cycle.
 - Session fallback data cannot overwrite an existing official cache. Missing or expired CLI credentials are reported in the helper log instead of silently freezing without a diagnostic.
+- The helper never forces `account/read` token refreshes while polling, avoiding refresh-token races with Codex Desktop.
 - `scripts/install_touchbar_helper.sh` builds the helper and registers a LaunchAgent.
 
 ## Common Commands

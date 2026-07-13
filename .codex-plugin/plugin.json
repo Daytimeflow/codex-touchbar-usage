@@ -1,6 +1,6 @@
 {
   "name": "codex-touchbar-usage",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Show Codex rate-limit balance on a MacBook Touch Bar through a native macOS helper.",
   "author": {
     "name": "Local developer"
@@ -16,7 +16,7 @@
   "interface": {
     "displayName": "Codex Touch Bar Usage",
     "shortDescription": "Show Codex usage windows on the MacBook Touch Bar.",
-    "longDescription": "Codex Touch Bar Usage installs a lightweight native macOS helper that reads official Codex rate limits and account token usage, keeps a local fallback cache, and renders compact 5-hour and 1-week balance bars on Touch Bar only while Codex is frontmost.",
+    "longDescription": "Codex Touch Bar Usage installs a lightweight native macOS helper that reads official Codex rate limits and account token usage, adapts to main and model-specific quota windows, and renders compact balance bars on Touch Bar only while Codex is frontmost.",
     "developerName": "Local developer",
     "category": "Productivity",
     "capabilities": [

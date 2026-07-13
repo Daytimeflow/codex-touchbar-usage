@@ -32,6 +32,19 @@ public enum UsageFormatting {
         return formatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
     }
 
+    public static func windowLabel(_ window: LimitWindow?) -> String {
+        guard let window else { return "--" }
+        let normalizedName = window.name.lowercased()
+        if normalizedName.contains("spark") || normalizedName.contains("bengalfox") {
+            return "Spark"
+        }
+        guard let minutes = window.windowMinutes, minutes > 0 else { return "--" }
+        if minutes == 10_080 { return "1周" }
+        if minutes % 1_440 == 0 { return "\(minutes / 1_440)天" }
+        if minutes % 60 == 0 { return "\(minutes / 60)小时" }
+        return "\(minutes)分"
+    }
+
     public static func tokenCount(_ value: Int?) -> String {
         guard let value else { return "--" }
         if value >= 100_000_000 {

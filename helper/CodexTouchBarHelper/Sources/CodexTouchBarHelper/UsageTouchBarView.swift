@@ -59,8 +59,8 @@ final class UsageTouchBarView: NSView {
 
         drawText("Codex", in: NSRect(x: 8, y: 7.0, width: 60, height: 17), font: codexFont, color: white, alignment: .left)
 
-        drawText("5小时", in: NSRect(x: 75, y: row1Y, width: 43, height: textHeight), font: labelFont, color: white, alignment: .left)
-        drawText("1周", in: NSRect(x: 75, y: row2Y, width: 43, height: textHeight), font: labelFont, color: white, alignment: .left)
+        drawText(UsageFormatting.windowLabel(snapshot.primary), in: NSRect(x: 75, y: row1Y, width: 43, height: textHeight), font: labelFont, color: white, alignment: .left)
+        drawText(UsageFormatting.windowLabel(snapshot.secondary), in: NSRect(x: 75, y: row2Y, width: 43, height: textHeight), font: labelFont, color: white, alignment: .left)
 
         let barX: CGFloat = 124
         drawSegmentedBar(

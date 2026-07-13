@@ -2,6 +2,15 @@
 
 All notable changes to Codex Touch Bar Usage are documented here.
 
+## [0.3.5] - 2026-07-13
+
+### Fixed
+
+- Parse the new `rateLimitsByLimitId` and `additional_rate_limits` response shapes.
+- Adapt Touch Bar row labels to current main and model-specific windows, including `1周 / Spark`, while preserving legacy `5小时 / 1周` support.
+- Accept quota-window identity changes without retaining percentages from a removed window.
+- Stop forcing `account/read` token refreshes on every poll, avoiding refresh-token races with Codex Desktop.
+
 ## [0.3.4] - 2026-07-11
 
 ### Fixed
@@ -48,6 +57,7 @@ All notable changes to Codex Touch Bar Usage are documented here.
 - Local JSONL token totals remain fallback-only and no longer replace official account totals.
 - All-zero and stale snapshots are rejected before they can replace valid quota data.
 
+[0.3.5]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.5
 [0.3.4]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.4
 [0.3.3]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.3
 [0.3.2]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.2

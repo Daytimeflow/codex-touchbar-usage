@@ -129,9 +129,12 @@ public final class UsageStore {
         let tokenUsageSource = stringValue(tokenStats["source"])
 
         if let apiRateLimit {
+            let primary = limitFromAPIWindow(name: "codex", payload: apiRateLimit["primary_window"])
+            let secondary = limitFromAPIWindow(name: "secondary", payload: apiRateLimit["secondary_window"])
+                ?? additionalLimitFromAPI(raw)
             return UsageSnapshot(
-                primary: limitFromAPIWindow(name: "primary", payload: apiRateLimit["primary_window"]),
-                secondary: limitFromAPIWindow(name: "secondary", payload: apiRateLimit["secondary_window"]),
+                primary: primary,
+                secondary: secondary,
                 contextWindow: contextWindow,
                 totalTokens: totalTokens,
                 lastTokens: lastTokens,
@@ -203,7 +206,7 @@ public final class UsageStore {
         request.timeoutInterval = configuration.requestTimeout
         request.setValue("Bearer \(auth.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("codex-touchbar-usage-native/0.3.4", forHTTPHeaderField: "User-Agent")
+        request.setValue("codex-touchbar-usage-native/0.3.5", forHTTPHeaderField: "User-Agent")
         if let accountID = auth.accountID {
             request.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-ID")
         }
@@ -386,10 +389,29 @@ public final class UsageStore {
         guard let payload = payload as? JSONObject else { return nil }
         let seconds = intValue(payload["limit_window_seconds"])
         return LimitWindow(
-            name: name,
+            name: stringValue(payload["name"]) ?? name,
             usedPercent: doubleValue(payload["used_percent"]),
             windowMinutes: seconds.map { $0 / 60 },
             resetsAt: intValue(payload["reset_at"])
         )
+    }
+
+    private func additionalLimitFromAPI(_ raw: JSONObject) -> LimitWindow? {
+        guard let limits = raw["additional_rate_limits"] as? [JSONObject] else { return nil }
+        let ordered = limits.sorted {
+            stringValue($0["metered_feature"]) == "codex_bengalfox"
+                && stringValue($1["metered_feature"]) != "codex_bengalfox"
+        }
+        for item in ordered {
+            guard let rateLimit = item["rate_limit"] as? JSONObject else { continue }
+            let name = stringValue(item["limit_name"])
+                ?? stringValue(item["metered_feature"])
+                ?? "additional"
+            if let window = limitFromAPIWindow(name: name, payload: rateLimit["primary_window"])
+                ?? limitFromAPIWindow(name: name, payload: rateLimit["secondary_window"]) {
+                return window
+            }
+        }
+        return nil
     }
 }

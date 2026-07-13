@@ -233,6 +233,95 @@ final class UsageParsingTests: XCTestCase {
         XCTAssertNotNil(raw["rate_limit"])
     }
 
+    func testAppServerUsageMapsNamedAdditionalLimitIntoSecondRow() throws {
+        let mainLimit: JSONObject = [
+            "limitId": "codex",
+            "primary": [
+                "usedPercent": 8,
+                "windowDurationMins": 10_080,
+                "resetsAt": 1_800_000_000
+            ],
+            "secondary": NSNull(),
+            "planType": "pro"
+        ]
+        let sparkLimit: JSONObject = [
+            "limitId": "codex_bengalfox",
+            "limitName": "GPT-5.3-Codex-Spark",
+            "primary": [
+                "usedPercent": 0,
+                "windowDurationMins": 10_080,
+                "resetsAt": 1_800_010_000
+            ],
+            "secondary": NSNull(),
+            "planType": "pro"
+        ]
+        let raw = try CodexAppServerClient.combine(
+            rateLimits: [
+                "rateLimits": mainLimit,
+                "rateLimitsByLimitId": [
+                    "codex": mainLimit,
+                    "codex_bengalfox": sparkLimit
+                ]
+            ],
+            tokenUsage: [:]
+        )
+
+        let snapshot = UsageStore().normalizeUsage(raw, source: "app-server")
+
+        XCTAssertEqual(snapshot.primary?.name, "codex")
+        XCTAssertEqual(snapshot.primary?.windowMinutes, 10_080)
+        XCTAssertEqual(snapshot.primary?.usedPercent, 8)
+        XCTAssertEqual(snapshot.secondary?.name, "GPT-5.3-Codex-Spark")
+        XCTAssertEqual(snapshot.secondary?.windowMinutes, 10_080)
+        XCTAssertEqual(snapshot.secondary?.usedPercent, 0)
+        XCTAssertEqual(UsageFormatting.windowLabel(snapshot.primary), "1周")
+        XCTAssertEqual(UsageFormatting.windowLabel(snapshot.secondary), "Spark")
+    }
+
+    func testHTTPUsageMapsAdditionalRateLimitIntoSecondRow() {
+        let raw: JSONObject = [
+            "plan_type": "pro",
+            "rate_limit": [
+                "primary_window": [
+                    "used_percent": 8,
+                    "limit_window_seconds": 604_800,
+                    "reset_at": 1_800_000_000
+                ],
+                "secondary_window": NSNull()
+            ],
+            "additional_rate_limits": [
+                [
+                    "limit_name": "GPT-5.3-Codex-Spark",
+                    "metered_feature": "codex_bengalfox",
+                    "rate_limit": [
+                        "primary_window": [
+                            "used_percent": 0,
+                            "limit_window_seconds": 604_800,
+                            "reset_at": 1_800_010_000
+                        ],
+                        "secondary_window": NSNull()
+                    ]
+                ]
+            ]
+        ]
+
+        let snapshot = UsageStore().normalizeUsage(raw, source: "remote")
+
+        XCTAssertEqual(snapshot.primary?.windowMinutes, 10_080)
+        XCTAssertEqual(snapshot.secondary?.name, "GPT-5.3-Codex-Spark")
+        XCTAssertEqual(snapshot.secondary?.windowMinutes, 10_080)
+        XCTAssertEqual(UsageFormatting.windowLabel(snapshot.primary), "1周")
+        XCTAssertEqual(UsageFormatting.windowLabel(snapshot.secondary), "Spark")
+    }
+
+    func testAppServerRequestsDoNotForceRefreshAuthentication() {
+        let methods = CodexAppServerClient.requestMessages().compactMap { stringValue($0["method"]) }
+
+        XCTAssertFalse(methods.contains("account/read"))
+        XCTAssertTrue(methods.contains("account/rateLimits/read"))
+        XCTAssertTrue(methods.contains("account/usage/read"))
+    }
+
     func testRemoteQuotaStabilizationRejectsRegressionWithinActiveWindow() {
         let current = UsageSnapshot(
             primary: LimitWindow(name: "primary", usedPercent: 30, windowMinutes: 300, resetsAt: 2_000),
@@ -385,6 +474,43 @@ final class UsageParsingTests: XCTestCase {
         let stabilized = current.stabilizingQuota(from: reset, now: 1_500)
 
         XCTAssertEqual(stabilized.primary, reset.primary)
+    }
+
+    func testRemoteQuotaStabilizationAcceptsChangedWindowIdentity() {
+        let current = UsageSnapshot(
+            primary: nil,
+            secondary: LimitWindow(name: "secondary", usedPercent: 32, windowMinutes: 10_080, resetsAt: 10_000),
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            tokenUsageSource: "account",
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_000
+        )
+        let changed = UsageSnapshot(
+            primary: nil,
+            secondary: LimitWindow(name: "GPT-5.3-Codex-Spark", usedPercent: 0, windowMinutes: 10_080, resetsAt: 30_000),
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            tokenUsageSource: "account",
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_500
+        )
+
+        let stabilized = current.stabilizingQuota(from: changed, now: 1_500)
+
+        XCTAssertEqual(stabilized.secondary, changed.secondary)
     }
 
     func testCachedUsagePreservesOfficialSourceForStartupStabilization() throws {
