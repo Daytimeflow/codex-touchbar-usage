@@ -61,6 +61,21 @@ func stringValue(_ value: Any?) -> String? {
     return nil
 }
 
+func timestampValue(_ value: Any?) -> Int? {
+    if let timestamp = intValue(value) { return timestamp }
+    guard let text = stringValue(value) else { return nil }
+
+    let fractional = ISO8601DateFormatter()
+    fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = fractional.date(from: text) {
+        return Int(date.timeIntervalSince1970)
+    }
+
+    let plain = ISO8601DateFormatter()
+    plain.formatOptions = [.withInternetDateTime]
+    return plain.date(from: text).map { Int($0.timeIntervalSince1970) }
+}
+
 func intAtPath(_ object: JSONObject, _ path: String...) -> Int? {
     var current: Any? = object
     for key in path {

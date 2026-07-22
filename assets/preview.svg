@@ -29,7 +29,7 @@
   <circle cx="194" cy="474" r="220" fill="#84FFB0" opacity="0.055"/>
 
   <text x="640" y="86" text-anchor="middle" fill="#F5F6F1" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="44" font-weight="750">Codex Touch Bar Usage</text>
-  <text x="640" y="126" text-anchor="middle" fill="#BFC8BE" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20">Codex Touch Bar Plugin · quota balance · token usage</text>
+  <text x="640" y="126" text-anchor="middle" fill="#BFC8BE" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20">Codex Touch Bar Plugin · quota balance · reset cards · token usage</text>
 
   <g filter="url(#shadow)">
     <rect x="90" y="178" width="1100" height="144" rx="26" fill="#0A0D0B"/>
@@ -39,7 +39,7 @@
     <text x="150" y="253" fill="#F6F7F3" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="27" font-style="italic" font-weight="800">Codex</text>
 
     <text x="276" y="235" fill="#F7F8F2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="22" font-weight="750">1周</text>
-    <text x="276" y="264" fill="#F7F8F2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="22" font-weight="750">Spark</text>
+    <text x="276" y="264" fill="#F7F8F2" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="22" font-weight="750">重置卡</text>
 
     <g transform="translate(394 222)" filter="url(#softGlow)">
       <g>
@@ -55,24 +55,34 @@
         <rect x="351" y="0" width="30" height="11" rx="5.5" fill="#2A3328"/>
       </g>
       <g transform="translate(0 29)">
-        <rect x="0" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
-        <rect x="39" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
-        <rect x="78" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
-        <rect x="117" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
-        <rect x="156" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
-        <rect x="195" y="0" width="30" height="11" rx="5.5" fill="url(#green)"/>
-        <rect x="234" y="0" width="30" height="11" rx="5.5" fill="#2A3328"/>
-        <rect x="273" y="0" width="30" height="11" rx="5.5" fill="#2A3328"/>
-        <rect x="312" y="0" width="30" height="11" rx="5.5" fill="#2A3328"/>
-        <rect x="351" y="0" width="30" height="11" rx="5.5" fill="#2A3328"/>
+        <g>
+          <rect x="0" y="0" width="36" height="11" rx="3" fill="#BFFF45" fill-opacity="0.18" stroke="#C7FF61"/>
+          <path d="M8 2.2V8.8" stroke="#DFFF98" stroke-opacity="0.7"/>
+          <rect x="12" y="2" width="19" height="2" rx="1" fill="#E8FFB2" fill-opacity="0.65"/>
+        </g>
+        <g transform="translate(45 0)">
+          <rect x="0" y="0" width="36" height="11" rx="3" fill="#BFFF45" fill-opacity="0.18" stroke="#C7FF61"/>
+          <path d="M8 2.2V8.8" stroke="#DFFF98" stroke-opacity="0.7"/>
+          <rect x="12" y="2" width="19" height="2" rx="1" fill="#E8FFB2" fill-opacity="0.65"/>
+        </g>
+        <g transform="translate(90 0)">
+          <rect x="0" y="0" width="36" height="11" rx="3" fill="#BFFF45" fill-opacity="0.18" stroke="#C7FF61"/>
+          <path d="M8 2.2V8.8" stroke="#DFFF98" stroke-opacity="0.7"/>
+          <rect x="12" y="2" width="19" height="2" rx="1" fill="#E8FFB2" fill-opacity="0.65"/>
+        </g>
+        <g id="reset-credit-4" transform="translate(135 0)">
+          <rect x="0" y="0" width="36" height="11" rx="3" fill="#BFFF45" fill-opacity="0.18" stroke="#C7FF61"/>
+          <path d="M8 2.2V8.8" stroke="#DFFF98" stroke-opacity="0.7"/>
+          <rect x="12" y="2" width="19" height="2" rx="1" fill="#E8FFB2" fill-opacity="0.65"/>
+        </g>
       </g>
     </g>
 
     <text x="826" y="235" text-anchor="end" fill="#F6F7F3" font-family="SFMono-Regular,Menlo,monospace" font-size="22" font-weight="700">99%</text>
-    <text x="826" y="264" text-anchor="end" fill="#F6F7F3" font-family="SFMono-Regular,Menlo,monospace" font-size="22" font-weight="700">61%</text>
+    <text x="826" y="264" text-anchor="end" fill="#F6F7F3" font-family="SFMono-Regular,Menlo,monospace" font-size="22" font-weight="700">4张</text>
 
     <text x="875" y="235" fill="#D7DDD4" font-family="SFMono-Regular,Menlo,monospace" font-size="19">06/30 15:58</text>
-    <text x="875" y="264" fill="#D7DDD4" font-family="SFMono-Regular,Menlo,monospace" font-size="19">07/06 09:29</text>
+    <text x="875" y="264" fill="#D7DDD4" font-family="SFMono-Regular,Menlo,monospace" font-size="19">07/18 08:34</text>
 
     <text x="1030" y="235" fill="#F6F7F3" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20" font-weight="750">昨日 2.5亿</text>
     <text x="1030" y="264" fill="#F6F7F3" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="20" font-weight="750">累计 75亿</text>

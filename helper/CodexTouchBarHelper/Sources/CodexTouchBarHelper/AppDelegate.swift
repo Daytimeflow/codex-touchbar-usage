@@ -7,15 +7,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var frontmostMonitor: FrontmostAppMonitor?
     private var localRefreshTimer: Timer?
     private var remoteRefreshTimer: Timer?
+    private var resetCardRefreshTimer: Timer?
     private var localRefreshTask: Task<Void, Never>?
     private var remoteRefreshTask: Task<Void, Never>?
     private var cachePreloadTask: Task<Void, Never>?
     private var currentSnapshot: UsageSnapshot?
     private var lastOfficialSnapshot: UsageSnapshot?
     private var lastRemoteFailureDescription: String?
+    private var resetCardRefreshDeadline: Date?
     private var isCodexFrontmost = false
     private let localRefreshInterval: TimeInterval = 3
     private let remoteRefreshInterval: TimeInterval = 30
+    private let resetCardRefreshInterval: TimeInterval = 8
+    private let resetCardRefreshDuration: TimeInterval = 3 * 60
 
     init(configuration: UsageStoreConfiguration) {
         self.usageStore = UsageStore(configuration: configuration)
@@ -67,6 +71,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.refreshRemoteUsage()
         }
         remoteRefreshTimer?.tolerance = 3
+
+        resumeResetCardRefreshIfNeeded()
     }
 
     private func stopRefresh() {
@@ -74,6 +80,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         localRefreshTimer = nil
         remoteRefreshTimer?.invalidate()
         remoteRefreshTimer = nil
+        resetCardRefreshTimer?.invalidate()
+        resetCardRefreshTimer = nil
         localRefreshTask?.cancel()
         localRefreshTask = nil
         remoteRefreshTask?.cancel()
@@ -113,7 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshRemoteUsage() {
-        remoteRefreshTask?.cancel()
+        guard remoteRefreshTask == nil else { return }
         remoteRefreshTask = Task { [weak self] in
             guard let self else { return }
 
@@ -121,20 +129,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let snapshot = try await usageStore.resolveUsage(allowRemote: true, cacheMaxAge: 0)
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
+                    self.remoteRefreshTask = nil
                     guard snapshot.source == "app-server" || snapshot.source == "remote" || self.currentSnapshot == nil else {
                         self.logRemoteFallback(snapshot)
                         return
                     }
                     self.lastRemoteFailureDescription = nil
-                    let stabilized = self.lastOfficialSnapshot?.stabilizingQuota(from: snapshot) ?? snapshot
+                    let previous = self.lastOfficialSnapshot
+                    let stabilized = previous?.stabilizingQuota(from: snapshot) ?? snapshot
+                    if let previous {
+                        let consumedResetCredit = snapshot.consumedResetCredit(since: previous)
+                        let quotaCycleAdvanced = stabilized.advancedPrimaryQuotaCycle(since: previous)
+                        if consumedResetCredit && !quotaCycleAdvanced {
+                            self.beginResetCardRefresh()
+                        } else if quotaCycleAdvanced {
+                            self.endResetCardRefresh()
+                        }
+                    }
                     self.lastOfficialSnapshot = stabilized
                     self.currentSnapshot = stabilized
                     self.touchBarController.update(stabilized)
                 }
             } catch {
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    self.remoteRefreshTask = nil
+                }
                 NSLog("CodexTouchBarHelper: remote refresh failed: \(error.localizedDescription)")
             }
         }
+    }
+
+    private func beginResetCardRefresh() {
+        resetCardRefreshDeadline = Date().addingTimeInterval(resetCardRefreshDuration)
+        scheduleResetCardRefreshTimer()
+    }
+
+    private func resumeResetCardRefreshIfNeeded() {
+        guard let deadline = resetCardRefreshDeadline, deadline > Date() else {
+            endResetCardRefresh()
+            return
+        }
+        scheduleResetCardRefreshTimer()
+    }
+
+    private func scheduleResetCardRefreshTimer() {
+        guard isCodexFrontmost else { return }
+        resetCardRefreshTimer?.invalidate()
+        resetCardRefreshTimer = Timer.scheduledTimer(withTimeInterval: resetCardRefreshInterval, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            guard let deadline = self.resetCardRefreshDeadline, deadline > Date() else {
+                self.endResetCardRefresh()
+                return
+            }
+            self.refreshRemoteUsage()
+        }
+        resetCardRefreshTimer?.tolerance = 1
+    }
+
+    private func endResetCardRefresh() {
+        resetCardRefreshTimer?.invalidate()
+        resetCardRefreshTimer = nil
+        resetCardRefreshDeadline = nil
     }
 
     private func logRemoteFallback(_ snapshot: UsageSnapshot) {

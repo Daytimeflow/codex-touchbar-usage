@@ -278,6 +278,35 @@ final class UsageParsingTests: XCTestCase {
         XCTAssertEqual(UsageFormatting.windowLabel(snapshot.secondary), "Spark")
     }
 
+    func testAppServerUsageMapsResetCreditCountAndEarliestExpiration() throws {
+        let raw = try CodexAppServerClient.combine(
+            rateLimits: [
+                "rateLimits": [
+                    "primary": [
+                        "usedPercent": 8,
+                        "windowDurationMins": 10_080,
+                        "resetsAt": 1_800_000_000
+                    ]
+                ],
+                "rateLimitResetCredits": [
+                    "availableCount": 4,
+                    "credits": [
+                        ["status": "available", "expiresAt": 1_800_030_000],
+                        ["status": "available", "expiresAt": 1_800_010_000],
+                        ["status": "redeemed", "expiresAt": 1_800_000_000]
+                    ]
+                ]
+            ],
+            tokenUsage: [:]
+        )
+
+        let snapshot = UsageStore().normalizeUsage(raw, source: "app-server")
+
+        XCTAssertEqual(snapshot.resetCreditsAvailable, 4)
+        XCTAssertEqual(snapshot.resetCreditsExpiresAt, 1_800_010_000)
+        XCTAssertEqual(UsageFormatting.resetCreditCountLabel(snapshot.resetCreditsAvailable), "4张")
+    }
+
     func testHTTPUsageMapsAdditionalRateLimitIntoSecondRow() {
         let raw: JSONObject = [
             "plan_type": "pro",
@@ -314,12 +343,126 @@ final class UsageParsingTests: XCTestCase {
         XCTAssertEqual(UsageFormatting.windowLabel(snapshot.secondary), "Spark")
     }
 
+    func testHTTPResetCreditDetailsAcceptISOExpirationDates() {
+        let expiration = "2026-07-18T00:34:58.367569Z"
+        let raw: JSONObject = [
+            "rate_limit": [
+                "primary_window": [
+                    "used_percent": 8,
+                    "limit_window_seconds": 604_800,
+                    "reset_at": 1_800_000_000
+                ]
+            ],
+            "rate_limit_reset_credits": [
+                "available_count": 2,
+                "credits": [
+                    ["status": "available", "expires_at": expiration]
+                ]
+            ]
+        ]
+
+        let snapshot = UsageStore().normalizeUsage(raw, source: "remote")
+
+        XCTAssertEqual(snapshot.resetCreditsAvailable, 2)
+        XCTAssertEqual(snapshot.resetCreditsExpiresAt, timestampValue(expiration))
+    }
+
+    func testZeroResetCreditsClearPreviousExpiration() {
+        let current = UsageSnapshot(
+            primary: nil,
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_000,
+            resetCreditsAvailable: 4,
+            resetCreditsExpiresAt: 2_000
+        )
+        let empty = UsageSnapshot(
+            primary: nil,
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_100,
+            resetCreditsAvailable: 0,
+            resetCreditsExpiresAt: nil
+        )
+
+        let stabilized = current.stabilizingQuota(from: empty, now: 1_100)
+
+        XCTAssertEqual(stabilized.resetCreditsAvailable, 0)
+        XCTAssertNil(stabilized.resetCreditsExpiresAt)
+    }
+
+    func testResetCardConsumptionIsDetectedBeforeQuotaPropagates() {
+        let previous = usageSnapshot(usedPercent: 19, resetsAt: 20_000, resetCredits: 4)
+        let cardConsumed = usageSnapshot(usedPercent: 19, resetsAt: 20_001, resetCredits: 3)
+
+        XCTAssertTrue(cardConsumed.consumedResetCredit(since: previous))
+        XCTAssertFalse(cardConsumed.advancedPrimaryQuotaCycle(since: previous))
+    }
+
+    func testResetCardRefreshStopsWhenNewQuotaCycleArrives() {
+        let previous = usageSnapshot(usedPercent: 19, resetsAt: 20_000, resetCredits: 4)
+        let reset = usageSnapshot(usedPercent: 1, resetsAt: 90_000, resetCredits: 3)
+
+        XCTAssertTrue(reset.consumedResetCredit(since: previous))
+        XCTAssertTrue(reset.advancedPrimaryQuotaCycle(since: previous))
+    }
+
+    func testOneSecondQuotaJitterDoesNotEndResetCardRefresh() {
+        let previous = usageSnapshot(usedPercent: 19, resetsAt: 20_000, resetCredits: 4)
+        let jitter = usageSnapshot(usedPercent: 18, resetsAt: 20_001, resetCredits: 3)
+
+        XCTAssertFalse(jitter.advancedPrimaryQuotaCycle(since: previous))
+    }
+
     func testAppServerRequestsDoNotForceRefreshAuthentication() {
         let methods = CodexAppServerClient.requestMessages().compactMap { stringValue($0["method"]) }
 
         XCTAssertFalse(methods.contains("account/read"))
         XCTAssertTrue(methods.contains("account/rateLimits/read"))
         XCTAssertTrue(methods.contains("account/usage/read"))
+    }
+
+    private func usageSnapshot(
+        usedPercent: Double,
+        resetsAt: Int,
+        resetCredits: Int
+    ) -> UsageSnapshot {
+        UsageSnapshot(
+            primary: LimitWindow(
+                name: "codex",
+                usedPercent: usedPercent,
+                windowMinutes: 10_080,
+                resetsAt: resetsAt
+            ),
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_000,
+            resetCreditsAvailable: resetCredits
+        )
     }
 
     func testRemoteQuotaStabilizationRejectsRegressionWithinActiveWindow() {
@@ -472,6 +615,51 @@ final class UsageParsingTests: XCTestCase {
         )
 
         let stabilized = current.stabilizingQuota(from: reset, now: 1_500)
+
+        XCTAssertEqual(stabilized.primary, reset.primary)
+    }
+
+    func testRemoteQuotaStabilizationAcceptsWeeklyResetShiftUnderQuarterWindow() {
+        let cached = UsageSnapshot(
+            primary: LimitWindow(
+                name: "codex",
+                usedPercent: 74,
+                windowMinutes: 10_080,
+                resetsAt: 1_784_682_528
+            ),
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_784_174_061
+        )
+        let reset = UsageSnapshot(
+            primary: LimitWindow(
+                name: "codex",
+                usedPercent: 4,
+                windowMinutes: 10_080,
+                resetsAt: 1_784_780_171
+            ),
+            secondary: nil,
+            contextWindow: nil,
+            totalTokens: nil,
+            lastTokens: nil,
+            yesterdayTokens: nil,
+            cumulativeTokens: nil,
+            inputTokens: nil,
+            outputTokens: nil,
+            planType: "pro",
+            source: "app-server",
+            fetchedAt: 1_784_183_600
+        )
+
+        let stabilized = cached.stabilizingQuota(from: reset, now: reset.fetchedAt)
 
         XCTAssertEqual(stabilized.primary, reset.primary)
     }

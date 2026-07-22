@@ -28,6 +28,8 @@ public struct UsageSnapshot: Codable, Equatable {
     public var planType: String?
     public var source: String
     public var fetchedAt: Int
+    public var resetCreditsAvailable: Int?
+    public var resetCreditsExpiresAt: Int?
     public var error: String?
 
     public init(
@@ -44,6 +46,8 @@ public struct UsageSnapshot: Codable, Equatable {
         planType: String?,
         source: String,
         fetchedAt: Int,
+        resetCreditsAvailable: Int? = nil,
+        resetCreditsExpiresAt: Int? = nil,
         error: String? = nil
     ) {
         self.primary = primary
@@ -59,6 +63,8 @@ public struct UsageSnapshot: Codable, Equatable {
         self.planType = planType
         self.source = source
         self.fetchedAt = fetchedAt
+        self.resetCreditsAvailable = resetCreditsAvailable
+        self.resetCreditsExpiresAt = resetCreditsExpiresAt
         self.error = error
     }
 
@@ -100,12 +106,15 @@ public struct UsageSnapshot: Codable, Equatable {
             planType: planType,
             source: source,
             fetchedAt: fetchedAt,
+            resetCreditsAvailable: resetCreditsAvailable,
+            resetCreditsExpiresAt: resetCreditsExpiresAt,
             error: error
         )
     }
 
     public func stabilizingQuota(from incoming: UsageSnapshot, now: Int = Int(Date().timeIntervalSince1970)) -> UsageSnapshot {
-        UsageSnapshot(
+        let hasIncomingResetCredits = incoming.resetCreditsAvailable != nil
+        return UsageSnapshot(
             primary: stableLimitWindow(current: primary, incoming: incoming.primary, now: now),
             secondary: stableLimitWindow(current: secondary, incoming: incoming.secondary, now: now),
             contextWindow: incoming.contextWindow ?? contextWindow,
@@ -119,7 +128,46 @@ public struct UsageSnapshot: Codable, Equatable {
             planType: incoming.planType ?? planType,
             source: incoming.source,
             fetchedAt: incoming.fetchedAt,
+            resetCreditsAvailable: incoming.resetCreditsAvailable ?? resetCreditsAvailable,
+            resetCreditsExpiresAt: hasIncomingResetCredits ? incoming.resetCreditsExpiresAt : resetCreditsExpiresAt,
             error: incoming.error
+        )
+    }
+
+    public func consumedResetCredit(since previous: UsageSnapshot) -> Bool {
+        guard
+            let previousCount = previous.resetCreditsAvailable,
+            let currentCount = resetCreditsAvailable
+        else {
+            return false
+        }
+        return currentCount < previousCount
+    }
+
+    public func advancedPrimaryQuotaCycle(since previous: UsageSnapshot) -> Bool {
+        guard
+            let previousWindow = previous.primary,
+            let currentWindow = primary,
+            let previousUsed = previousWindow.usedPercent,
+            let currentUsed = currentWindow.usedPercent,
+            currentUsed < previousUsed
+        else {
+            return false
+        }
+
+        guard
+            previousWindow.name == currentWindow.name,
+            previousWindow.windowMinutes == currentWindow.windowMinutes
+        else {
+            return true
+        }
+
+        guard let currentReset = currentWindow.resetsAt else { return false }
+        return startsNewQuotaCycle(
+            current: previousWindow,
+            incoming: currentWindow,
+            currentReset: previousWindow.resetsAt,
+            incomingReset: currentReset
         )
     }
 }
@@ -163,7 +211,7 @@ private func startsNewQuotaCycle(
 ) -> Bool {
     guard let currentReset, incomingReset > currentReset else { return false }
     guard let windowMinutes = incoming.windowMinutes ?? current.windowMinutes, windowMinutes > 0 else { return false }
-    let minimumCycleShift = max(60, windowMinutes * 60 / 4)
+    let minimumCycleShift = max(60, min(30 * 60, windowMinutes * 60 / 4))
     return incomingReset - currentReset >= minimumCycleShift
 }
 
@@ -182,6 +230,7 @@ public struct TokenStats: Codable, Equatable {
 public struct UsageStoreConfiguration {
     public var codexHome: URL
     public var endpoint: URL
+    public var resetCreditsEndpoint: URL
     public var cacheFile: URL
     public var tokenStatsCacheFile: URL
     public var requestTimeout: TimeInterval
@@ -190,6 +239,7 @@ public struct UsageStoreConfiguration {
     public init(
         codexHome: URL = UsageStoreConfiguration.defaultCodexHome(),
         endpoint: URL = URL(string: "https://chatgpt.com/backend-api/wham/usage")!,
+        resetCreditsEndpoint: URL = URL(string: "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits")!,
         cacheFile: URL? = nil,
         tokenStatsCacheFile: URL? = nil,
         requestTimeout: TimeInterval = 4,
@@ -197,6 +247,7 @@ public struct UsageStoreConfiguration {
     ) {
         self.codexHome = codexHome
         self.endpoint = endpoint
+        self.resetCreditsEndpoint = resetCreditsEndpoint
         self.cacheFile = cacheFile ?? codexHome.appendingPathComponent("touchbar-usage/usage-cache.json")
         self.tokenStatsCacheFile = tokenStatsCacheFile ?? codexHome.appendingPathComponent("touchbar-usage/token-stats-cache.json")
         self.requestTimeout = requestTimeout

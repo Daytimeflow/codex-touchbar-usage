@@ -2,6 +2,27 @@
 
 All notable changes to Codex Touch Bar Usage are documented here.
 
+## [0.3.6] - 2026-07-22
+
+### Added
+
+- Show the available Codex rate-limit reset-card count and earliest expiration on the second Touch Bar row.
+- Parse reset-card details from the existing app-server rate-limit response without adding a request on the normal refresh path.
+- Use the authenticated `wham/rate-limit-reset-credits` endpoint as a fallback when app-server access is unavailable.
+
+### Changed
+
+- Replace the low-value Spark quota row with compact reset-card ticket indicators, count, and expiration time.
+- Cache only the reset-card count and earliest expiration; card IDs and descriptions are discarded.
+- Detect reset-card consumption and temporarily refresh official quota about every 8 seconds for up to 3 minutes, stopping when the new quota cycle propagates.
+
+### Fixed
+
+- Accept genuine weekly quota resets whose reset timestamp moves forward by less than one quarter of the full window.
+- Give the official app-server enough time to return current rate limits on slower refreshes.
+- Prevent overlapping official refresh tasks during reset-card follow-up polling.
+- Pin direct Swift builds to the documented macOS 12 deployment target.
+
 ## [0.3.5] - 2026-07-13
 
 ### Fixed
@@ -57,6 +78,7 @@ All notable changes to Codex Touch Bar Usage are documented here.
 - Local JSONL token totals remain fallback-only and no longer replace official account totals.
 - All-zero and stale snapshots are rejected before they can replace valid quota data.
 
+[0.3.6]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.6
 [0.3.5]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.5
 [0.3.4]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.4
 [0.3.3]: https://github.com/Daytimeflow/codex-touchbar-usage/releases/tag/v0.3.3

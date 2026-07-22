@@ -5,7 +5,7 @@
     专为 Codex 打造的 MacBook Pro Touch Bar 用量插件。
   </p>
   <p>
-    一眼看到 Codex 额度余额、重置时间、昨日 token、累计 token。
+    把 Codex 额度余额、重置卡、重置时间和 token 用量放进 Touch Bar。
   </p>
 </div>
 
@@ -26,7 +26,7 @@
 
 ![Codex Touch Bar Usage 动态效果](assets/demo.gif)
 
-<p align="center"><sub>聚焦 Codex 时显示额度与 token 用量；切换到其他 App 后自动恢复系统控制条。</sub></p>
+<p align="center"><sub>聚焦 Codex 时显示额度、重置卡与 token 用量；切换到其他 App 后自动恢复系统控制条。</sub></p>
 
 ## 概述
 
@@ -42,25 +42,25 @@
 | --- | --- |
 | 标识 | `Codex` 白色斜体标题 |
 | 主额度 | 自动识别官方窗口时长，显示余额胶囊条、余额百分比、重置时间 |
-| 附加模型额度 | 自动识别 Spark 等模型独立额度；旧账号仍兼容 5 小时 / 1 周双窗口 |
+| 重置卡 | 显示可用张数和最早到期时间，避免卡片闲置过期 |
 | token 用量 | 昨日 token、累计 token，按 `万` / `亿` 格式显示 |
 | 前台感知 | 只在 Codex 聚焦时显示，切走后隐藏 |
-| 轻量刷新 | 官方额度与 token 数据约 30 秒刷新；隐藏时停止刷新；本地统计仅在官方数据不可用时降级启用 |
+| 轻量刷新 | 常规约 30 秒刷新；检测到使用重置卡后约 8 秒追踪一次、最长 3 分钟；隐藏时停止刷新 |
 
 ## 为什么是它
 
 | 设计重点 | Codex Touch Bar Usage |
 | --- | --- |
-| Codex 专属 | 围绕官方主额度、模型附加额度、重置时间、昨日 / 累计 token 设计，不做无关仪表盘 |
+| Codex 专属 | 围绕官方主额度、重置卡、重置时间、昨日 / 累计 token 设计，不做无关仪表盘 |
 | 官方账户口径 | 优先读取 Codex 官方 app-server 数据，token 数值与个人资料页保持同一口径 |
 | 前台即用 | 只在 Codex / ChatGPT 位于前台时显示，切走后恢复亮度、音量等系统控制 |
 | 原生轻量 | Swift + AppKit 单一自绘视图，无 Electron / WebView；前台切换由系统事件驱动，隐藏时零刷新 |
-| 信息完整 | 余额胶囊条支持部分填充，同时展示余额百分比、统一重置时间和账户 token 用量 |
+| 信息完整 | 余额胶囊条支持部分填充，同时展示余额百分比、重置卡数量、最早到期时间和账户 token 用量 |
 
 ## 适合谁
 
 - 每天长时间使用 Codex / Codex CLI / Codex Desktop 的用户；
-- 想随时知道 Codex 主额度和 Spark 等模型附加额度还剩多少的人；
+- 想随时知道 Codex 主额度还剩多少、重置卡是否快过期的人；
 - 想看昨日和累计 token 消耗，但不想频繁打开个人资料页的人；
 - 还在用带 Touch Bar 的 MacBook Pro，想让这条屏幕重新有点存在感的人。
 
@@ -72,7 +72,7 @@
 - macOS 12 或更新版本
 - 已安装最新版 Codex / ChatGPT 桌面应用（新版外壳仍使用 Codex 服务）
 - 已登录 Codex，且本机存在 `~/.codex/auth.json`
-- Swift toolchain：完整 Xcode 或 Command Line Tools 均可
+- Homebrew / GitHub Release 安装无需 Swift；源码安装需要完整 Xcode 或 Command Line Tools
 
 > 说明：当前项目使用 macOS 私有的 system-modal Touch Bar 能力，目标是本机自用与开源学习，不以 App Store 分发兼容为目标。
 
@@ -95,16 +95,16 @@ brew upgrade --cask codex-touchbar-usage
 
 ### GitHub Release（Apple Silicon）
 
-从 [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest) 下载 `CodexTouchBarUsage-v0.3.5-arm64.zip` 和对应的 `.sha256`：
+从 [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest) 下载 `CodexTouchBarUsage-v0.3.6-arm64.zip` 和对应的 `.sha256`：
 
 ```bash
-shasum -a 256 -c CodexTouchBarUsage-v0.3.5-arm64.zip.sha256
-unzip CodexTouchBarUsage-v0.3.5-arm64.zip
-cd CodexTouchBarUsage-v0.3.5-arm64
+shasum -a 256 -c CodexTouchBarUsage-v0.3.6-arm64.zip.sha256
+unzip CodexTouchBarUsage-v0.3.6-arm64.zip
+cd CodexTouchBarUsage-v0.3.6-arm64
 ./install.sh
 ```
 
-预构建包采用 ad-hoc 签名，暂未经过 Apple notarization。如果 Gatekeeper 阻止启动，优先使用 Homebrew 或源码安装。
+预构建包采用 ad-hoc 签名，暂未经过 Apple notarization。请先校验 SHA-256；如果 Gatekeeper 阻止启动，到“系统设置 → 隐私与安全”找到拦截提示，确认“仍要打开”，然后重新启动 helper。也可以改用源码安装，在本机完成编译。
 
 ### 源码安装
 
@@ -195,6 +195,7 @@ Release 安装（在解压目录中）：
 | 数据 | 来源 |
 | --- | --- |
 | 额度余额 / 重置时间 | Codex 官方 app-server `account/rateLimits/read` |
+| 重置卡 | 同一次 `account/rateLimits/read` 返回的卡片明细；app-server 不可用时回退到 `wham/rate-limit-reset-credits` |
 | 昨日 / 累计 token | Codex 官方 app-server `account/usage/read`，与个人资料页同口径 |
 | 本地降级 | Codex session JSONL 与 usage cache；官方数据不可用时启用 |
 | 缓存 | `~/.codex/touchbar-usage/` |
@@ -203,8 +204,16 @@ Release 安装（在解压目录中）：
 
 - 不上传本地 session 内容；
 - 不记录或打印 access token；
+- 本地只缓存重置卡数量和最早到期时间，不保存卡片 ID 与说明；
 - helper 隐藏时不刷新 UI、不请求网络；
 - app-server 只在刷新官方数据时短暂启动，读取完成立即退出，不增加常驻进程。
+
+## 刷新机制
+
+- Codex 切到前台时立即请求一次官方数据，之后常规约每 30 秒刷新；
+- 检测到重置卡数量减少后，临时约每 8 秒追踪一次新额度周期，最长 3 分钟；
+- 官方服务可能先更新卡片数量、稍后才更新额度。helper 不会伪造 `100%`，而是在新周期真实返回后立即刷新；
+- 同一时间最多只有一个官方请求；切出 Codex 后计时器和网络刷新都会暂停。
 
 ## 常用命令
 
@@ -240,7 +249,7 @@ codex login status
 codex login --device-auth
 ```
 
-helper 不会读取或复制桌面端私有登录信息，只使用官方 Codex CLI 保存的本机凭据。
+helper 不会读取或复制桌面端私有登录信息，只使用官方 Codex CLI 保存的本机凭据。重新授权后，可用本节开头的 `--once-json` 命令打印官方快照，与 Touch Bar 当前值对比。
 
 ## 常见问题
 
@@ -292,6 +301,10 @@ du -sh ~/.codex/touchbar-usage ~/.codex/sessions
 
 右侧数值采用 Codex 个人资料页的官方账户统计，helper 约每 30 秒刷新一次。官方统计本身可能批量更新，因此不会随模型输出逐字变化；本地 JSONL 增量只在官方统计不可用时作为降级数据。
 
+### 使用重置卡后为什么额度不会立刻变化？
+
+官方服务可能先扣减重置卡，再异步切换额度周期。helper 检测到卡片数量减少后会进入最长 3 分钟的短时追踪刷新；正常情况下，新额度一经官方接口返回就会在约 8 秒内显示。若超过 3 分钟仍未变化，可用上面的 `--once-json` 命令确认官方数据是否已经生效。
+
 ## 开发
 
 构建：
@@ -323,7 +336,7 @@ swift test
 
 ## 支持与赞助
 
-如果这个小工具节省了你的负担，欢迎点一个 Star，也欢迎扫码请作者喝杯咖啡。
+如果这个小工具减轻了你的负担，欢迎点一个 Star，也欢迎扫码请作者喝杯咖啡。
 
 | 支付宝 | 微信 |
 | --- | --- |

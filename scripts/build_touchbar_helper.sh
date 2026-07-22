@@ -6,8 +6,9 @@ PLUGIN_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PACKAGE_DIR="${PLUGIN_DIR}/helper/CodexTouchBarHelper"
 APP_DIR="${APP_DIR:-${HOME}/Applications/CodexTouchBarHelper.app}"
 CONFIGURATION="${CONFIGURATION:-release}"
+MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
 CLANG_MODULE_CACHE_PATH="${CLANG_MODULE_CACHE_PATH:-${TMPDIR:-/tmp}/codex-touchbar-clang-cache}"
-export CLANG_MODULE_CACHE_PATH
+export CLANG_MODULE_CACHE_PATH MACOSX_DEPLOYMENT_TARGET
 
 if ! command -v swift >/dev/null 2>&1; then
   echo "Swift is required. Install Xcode Command Line Tools, then rerun this script." >&2
@@ -21,10 +22,12 @@ if /usr/bin/xcrun --sdk macosx --show-sdk-platform-path >/dev/null 2>&1 \
 else
   echo "SwiftPM is unavailable in this toolchain; falling back to direct swiftc build." >&2
   DIRECT_BUILD_DIR="${PACKAGE_DIR}/.build/direct-${CONFIGURATION}"
+  TARGET_TRIPLE="$(uname -m)-apple-macosx${MACOSX_DEPLOYMENT_TARGET}"
   rm -rf "${DIRECT_BUILD_DIR}"
   mkdir -p "${DIRECT_BUILD_DIR}"
 
   swiftc \
+    -target "${TARGET_TRIPLE}" \
     -parse-as-library \
     -emit-library \
     -static \
@@ -35,6 +38,7 @@ else
     -o "${DIRECT_BUILD_DIR}/libCodexTouchBarCore.a"
 
   swiftc \
+    -target "${TARGET_TRIPLE}" \
     -I "${DIRECT_BUILD_DIR}" \
     -L "${DIRECT_BUILD_DIR}" \
     -lCodexTouchBarCore \

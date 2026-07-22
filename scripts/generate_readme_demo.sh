@@ -19,7 +19,9 @@ command -v ffmpeg >/dev/null
 
 /usr/bin/sed \
   -e 's/>99%</>94%</' \
-  -e 's/>61%</>58%</' \
+  -e 's/>4张</>3张</' \
+  -e 's/>07\/18 08:34</>07\/27 07:48</' \
+  -e 's/<g id="reset-credit-4"/<g opacity="0" id="reset-credit-4"/' \
   -e 's/>昨日 2.5亿</>昨日 2.7亿</' \
   -e 's/>累计 75亿</>累计 75.2亿</' \
   "${PLUGIN_DIR}/assets/preview.svg" > "${WORK_DIR}/updated.svg"

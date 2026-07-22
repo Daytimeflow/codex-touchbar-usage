@@ -5,7 +5,7 @@
     A native MacBook Pro Touch Bar usage plugin built for Codex.
   </p>
   <p>
-    See your Codex quota balance, reset times, yesterday's tokens, and lifetime tokens at a glance.
+    Put Codex quota, reset cards, reset times, and token usage directly on your Touch Bar.
   </p>
 </div>
 
@@ -26,7 +26,7 @@
 
 ![Codex Touch Bar Usage animated demo](assets/demo.gif)
 
-<p align="center"><sub>Usage appears when Codex is focused; system controls return when you switch away.</sub></p>
+<p align="center"><sub>Quota, reset cards, and token usage appear when Codex is focused; system controls return when you switch away.</sub></p>
 
 ## Overview
 
@@ -42,25 +42,25 @@ It is not Electron, not a WebView, and not a fragile pile of separate Touch Bar 
 | --- | --- |
 | Identity | White italic `Codex` title |
 | Main quota | Automatically detects the official window duration and shows balance capsules, remaining amount, and reset time |
-| Model-specific quota | Detects independent limits such as Spark; legacy 5-hour / 1-week dual windows remain supported |
+| Reset cards | Shows the available count and earliest expiration so earned resets do not expire unnoticed |
 | Token usage | Yesterday's tokens and lifetime tokens, formatted in `万` / `亿` units |
 | Frontmost app awareness | Shows only when Codex is focused, hides when you switch away |
-| Lightweight refresh | Official quota and token data refresh about every 30 seconds; refresh stops while hidden; local stats are fallback-only |
+| Lightweight refresh | Normally refreshes about every 30 seconds; after a reset card is used, follows up about every 8 seconds for up to 3 minutes; stops while hidden |
 
 ## Why This Project
 
 | Design priority | Codex Touch Bar Usage |
 | --- | --- |
-| Codex-first | Built around official main quota, model-specific limits, reset times, and yesterday / lifetime tokens instead of a generic dashboard |
+| Codex-first | Built around official main quota, reset cards, reset times, and yesterday / lifetime tokens instead of a generic dashboard |
 | Official account totals | Prefers the official Codex app-server data, matching the token totals shown on the profile page |
 | Focus-aware | Appears only while Codex / ChatGPT is frontmost, then restores brightness, volume, and other system controls |
 | Native and lightweight | One Swift + AppKit custom view with no Electron / WebView; app focus is event-driven and refresh stops while hidden |
-| Complete at a glance | Partial-fill balance capsules plus remaining percentages, consistent reset timestamps, and account token totals |
+| Complete at a glance | Partial-fill balance capsules plus remaining percentages, reset-card count, earliest expiration, and account token totals |
 
 ## Who Is This For
 
 - People who use Codex, Codex CLI, or Codex Desktop for long sessions every day;
-- People who want to know how much main Codex and model-specific quota such as Spark is still available;
+- People who want to know how much main Codex quota remains and whether a reset card is close to expiring;
 - People who want yesterday and lifetime token usage without opening the profile page repeatedly;
 - People with a Touch Bar MacBook Pro who want that strip to be useful again.
 
@@ -72,7 +72,7 @@ Keywords: `Codex Touch Bar`, `Codex usage`, `Codex token tracker`, `Codex quota`
 - macOS 12 or later
 - The latest Codex / ChatGPT desktop app installed (the new shell still hosts Codex services)
 - Signed in to Codex, with `~/.codex/auth.json` available locally
-- Swift toolchain: full Xcode or Command Line Tools both work
+- Homebrew / GitHub Release installs do not require Swift; source installation requires full Xcode or Command Line Tools
 
 > Note: this project uses macOS private system-modal Touch Bar capabilities. It is intended for local personal use and open-source learning, not App Store distribution.
 
@@ -95,16 +95,16 @@ brew upgrade --cask codex-touchbar-usage
 
 ### GitHub Release (Apple Silicon)
 
-Download `CodexTouchBarUsage-v0.3.5-arm64.zip` and its `.sha256` file from [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest):
+Download `CodexTouchBarUsage-v0.3.6-arm64.zip` and its `.sha256` file from [Releases](https://github.com/Daytimeflow/codex-touchbar-usage/releases/latest):
 
 ```bash
-shasum -a 256 -c CodexTouchBarUsage-v0.3.5-arm64.zip.sha256
-unzip CodexTouchBarUsage-v0.3.5-arm64.zip
-cd CodexTouchBarUsage-v0.3.5-arm64
+shasum -a 256 -c CodexTouchBarUsage-v0.3.6-arm64.zip.sha256
+unzip CodexTouchBarUsage-v0.3.6-arm64.zip
+cd CodexTouchBarUsage-v0.3.6-arm64
 ./install.sh
 ```
 
-The prebuilt app is ad-hoc signed and not yet Apple-notarized. If Gatekeeper blocks it, use the Homebrew or source installation instead.
+The prebuilt app is ad-hoc signed and not yet Apple-notarized. Verify its SHA-256 first. If Gatekeeper blocks it, open System Settings → Privacy & Security, approve **Open Anyway**, then start the helper again. You can also install from source to compile it locally.
 
 ### Install from source
 
@@ -195,6 +195,7 @@ It does not delete your Codex login information and does not remove `~/.codex`.
 | Data | Source |
 | --- | --- |
 | Quota balance / reset times | Official Codex app-server `account/rateLimits/read` |
+| Reset cards | Details returned by the same `account/rateLimits/read`; falls back to `wham/rate-limit-reset-credits` when app-server access is unavailable |
 | Yesterday / lifetime tokens | Official Codex app-server `account/usage/read`, matching the profile page |
 | Local fallback | Codex session JSONL and usage cache, used only when official data is unavailable |
 | Cache | `~/.codex/touchbar-usage/` |
@@ -203,8 +204,16 @@ Privacy principles:
 
 - local session contents are not uploaded;
 - access tokens are not logged or printed;
+- only reset-card count and earliest expiration are cached; card IDs and descriptions are discarded;
 - when the helper is hidden, it does not refresh UI or make network requests;
 - app-server starts only briefly for an official data refresh and exits immediately afterward; it is not an additional resident process.
+
+## Refresh Behavior
+
+- When Codex becomes frontmost, the helper immediately requests official data, then refreshes about every 30 seconds;
+- when the reset-card count decreases, it temporarily follows the new quota cycle about every 8 seconds for up to 3 minutes;
+- the upstream service may update the card count before the quota. The helper never fabricates `100%`; it refreshes as soon as the new cycle is actually returned;
+- at most one official request runs at a time, and all timers and network refreshes pause when Codex is not frontmost.
 
 ## Useful Commands
 
@@ -240,7 +249,7 @@ codex login status
 codex login --device-auth
 ```
 
-The helper does not read or copy private desktop-app credentials. It only uses credentials stored locally by the official Codex CLI.
+The helper does not read or copy private desktop-app credentials. It only uses credentials stored locally by the official Codex CLI. After signing in again, use the `--once-json` command at the start of this section to print an official snapshot and compare it with the Touch Bar value.
 
 ## FAQ
 
@@ -291,6 +300,10 @@ du -sh ~/.codex/touchbar-usage ~/.codex/sessions
 ### Why does token usage not update character by character?
 
 The right-side values use the official account totals shown on the Codex profile page and refresh about every 30 seconds. The upstream profile data may update in batches, so it does not change with every generated character; local JSONL increments are only a fallback when official account usage is unavailable.
+
+### Why does quota not change immediately after I use a reset card?
+
+The upstream service may deduct the card first and switch the quota cycle asynchronously. When the card count drops, the helper enters a follow-up mode for up to 3 minutes; once the official endpoint returns the new quota, it normally appears within about 8 seconds. If it is still unchanged after 3 minutes, use the `--once-json` command above to confirm whether the official data has propagated.
 
 ## Development
 

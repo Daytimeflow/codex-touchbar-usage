@@ -7,7 +7,7 @@ final class CodexAppServerClient {
     init?(timeout: TimeInterval) {
         guard let executableURL = Self.findCodexExecutable() else { return nil }
         self.executableURL = executableURL
-        self.timeout = max(timeout, 6)
+        self.timeout = max(timeout, 10)
     }
 
     func fetchUsage() throws -> JSONObject {
@@ -98,7 +98,7 @@ final class CodexAppServerClient {
                     "clientInfo": [
                         "name": "codex_touchbar_usage",
                         "title": "Codex Touch Bar Usage",
-                        "version": "0.3.5"
+                        "version": "0.3.6"
                     ]
                 ]
             ],
@@ -126,6 +126,9 @@ final class CodexAppServerClient {
             apiRateLimit["secondary_window"] = additional
         }
         raw["rate_limit"] = apiRateLimit
+        if let resetCredits = compactResetCredits(rateLimits["rateLimitResetCredits"]) {
+            raw["rate_limit_reset_credits"] = resetCredits
+        }
 
         let summary = tokenUsage["summary"] as? JSONObject ?? [:]
         let buckets = tokenUsage["dailyUsageBuckets"] as? [JSONObject] ?? []
@@ -142,6 +145,25 @@ final class CodexAppServerClient {
             ]
         }
         return raw
+    }
+
+    private static func compactResetCredits(_ value: Any?) -> JSONObject? {
+        guard let payload = value as? JSONObject else { return nil }
+        let availableCount = intValue(payload["availableCount"])
+            ?? intValue(payload["available_count"])
+        guard let availableCount else { return nil }
+
+        let credits = payload["credits"] as? [JSONObject] ?? []
+        let earliestExpiration = credits
+            .filter { (stringValue($0["status"]) ?? "available") == "available" }
+            .compactMap { timestampValue($0["expiresAt"] ?? $0["expires_at"]) }
+            .min()
+
+        var compact: JSONObject = ["available_count": max(0, availableCount)]
+        if let earliestExpiration {
+            compact["expires_at"] = earliestExpiration
+        }
+        return compact
     }
 
     private static func appServerWindow(_ value: Any?, name: String) -> JSONObject? {

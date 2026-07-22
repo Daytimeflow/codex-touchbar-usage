@@ -118,6 +118,7 @@ public final class UsageStore {
         let tokenInfo = raw["token_info"] as? JSONObject ?? [:]
         let tokenStats = raw["token_stats"] as? JSONObject ?? [:]
         let now = Int(Date().timeIntervalSince1970)
+        let resetCredits = resetCreditSummary(raw)
 
         let contextWindow = intAtPath(tokenInfo, "model_context_window")
         let totalTokens = intAtPath(tokenInfo, "total_token_usage", "total_tokens")
@@ -146,6 +147,8 @@ public final class UsageStore {
                 planType: stringValue(raw["plan_type"]),
                 source: source,
                 fetchedAt: now,
+                resetCreditsAvailable: resetCredits.availableCount,
+                resetCreditsExpiresAt: resetCredits.earliestExpiration,
                 error: error?.isEmpty == false ? error : nil
             )
         }
@@ -164,6 +167,8 @@ public final class UsageStore {
             planType: stringValue(rateLimits["plan_type"]) ?? stringValue(raw["plan_type"]),
             source: source,
             fetchedAt: now,
+            resetCreditsAvailable: resetCredits.availableCount,
+            resetCreditsExpiresAt: resetCredits.earliestExpiration,
             error: error?.isEmpty == false ? error : nil
         )
     }
@@ -182,7 +187,14 @@ public final class UsageStore {
 
         do {
             let auth = try readAuthCredentials()
-            return (try await fetchAuthenticatedJSON(url: configuration.endpoint, auth: auth), "remote")
+            var raw = try await fetchAuthenticatedJSON(url: configuration.endpoint, auth: auth)
+            if let details = try? await fetchAuthenticatedJSON(
+                url: configuration.resetCreditsEndpoint,
+                auth: auth
+            ) {
+                mergeResetCreditDetails(details, into: &raw)
+            }
+            return (raw, "remote")
         } catch {
             failures.append("authenticated HTTP: \(error.localizedDescription)")
             throw UsageError.noUsableUsage(failures.joined(separator: "; "))
@@ -206,7 +218,7 @@ public final class UsageStore {
         request.timeoutInterval = configuration.requestTimeout
         request.setValue("Bearer \(auth.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("codex-touchbar-usage-native/0.3.5", forHTTPHeaderField: "User-Agent")
+        request.setValue("codex-touchbar-usage-native/0.3.6", forHTTPHeaderField: "User-Agent")
         if let accountID = auth.accountID {
             request.setValue(accountID, forHTTPHeaderField: "ChatGPT-Account-ID")
         }
@@ -217,12 +229,41 @@ public final class UsageStore {
         let session = URLSession(configuration: sessionConfiguration)
         let (data, response) = try await session.data(for: request)
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            throw UsageError.noUsableUsage("usage endpoint returned HTTP \(http.statusCode)")
+            throw UsageError.noUsableUsage("\(url.lastPathComponent) endpoint returned HTTP \(http.statusCode)")
         }
         guard let object = try JSONSerialization.jsonObject(with: data) as? JSONObject else {
             throw UsageError.noUsableUsage("\(url.path) returned non-object JSON")
         }
         return object
+    }
+
+    private func mergeResetCreditDetails(_ details: JSONObject, into raw: inout JSONObject) {
+        let summary = resetCreditSummary(details)
+        guard let availableCount = summary.availableCount else { return }
+
+        var compact: JSONObject = ["available_count": max(0, availableCount)]
+        if let earliestExpiration = summary.earliestExpiration {
+            compact["expires_at"] = earliestExpiration
+        }
+        raw["rate_limit_reset_credits"] = compact
+    }
+
+    private func resetCreditSummary(_ raw: JSONObject) -> (availableCount: Int?, earliestExpiration: Int?) {
+        let payload = (raw["rate_limit_reset_credits"] as? JSONObject)
+            ?? (raw["rateLimitResetCredits"] as? JSONObject)
+            ?? raw
+        let availableCount = intValue(payload["available_count"])
+            ?? intValue(payload["availableCount"])
+        guard let availableCount else { return (nil, nil) }
+        guard availableCount > 0 else { return (0, nil) }
+
+        let compactExpiration = timestampValue(payload["expires_at"] ?? payload["expiresAt"])
+        let credits = payload["credits"] as? [JSONObject] ?? []
+        let detailedExpiration = credits
+            .filter { (stringValue($0["status"]) ?? "available") == "available" }
+            .compactMap { timestampValue($0["expires_at"] ?? $0["expiresAt"]) }
+            .min()
+        return (availableCount, detailedExpiration ?? compactExpiration)
     }
 
     private func loadLatestSessionUsage(maxFiles: Int = 12) throws -> JSONObject {

@@ -35,9 +35,10 @@ public final class TokenStatsStore {
                 try handle.seek(toOffset: offset)
                 let tail = handle.readDataToEndOfFile()
                 let modification = modificationDate(for: url)
+                let tokenUsageMarker = Data(#""last_token_usage""#.utf8)
 
                 for part in tail.split(separator: 10, omittingEmptySubsequences: true) {
-                    guard part.contains(Data(#""last_token_usage""#.utf8)) else { continue }
+                    guard part.range(of: tokenUsageMarker) != nil else { continue }
                     let line = String(decoding: part, as: UTF8.self)
                     guard
                         let event = parseJSONLine(line),

@@ -32,6 +32,11 @@ public enum UsageFormatting {
         return formatter.string(from: Date(timeIntervalSince1970: TimeInterval(timestamp)))
     }
 
+    public static func resetCreditCountLabel(_ availableCount: Int?) -> String {
+        guard let availableCount else { return "--张" }
+        return "\(max(0, availableCount))张"
+    }
+
     public static func windowLabel(_ window: LimitWindow?) -> String {
         guard let window else { return "--" }
         let normalizedName = window.name.lowercased()
