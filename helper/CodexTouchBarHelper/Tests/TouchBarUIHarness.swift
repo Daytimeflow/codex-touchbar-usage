@@ -41,6 +41,34 @@ struct TouchBarUIHarness {
         original.source = "app-server"
         codex.snapshot = original
         try render(codex, to: directory.appendingPathComponent("codex.png"))
+        original.primary = LimitWindow(name: "codex", usedPercent: 35, windowMinutes: 300, resetsAt: 1_800_000_000)
+        original.secondary = LimitWindow(name: "secondary", usedPercent: 20, windowMinutes: 10_080, resetsAt: 1_800_010_000)
+        original.resetCreditsAvailable = 12
+        codex.snapshot = original
+        for mask in 0..<32 {
+            codex.displaySettings = DisplaySettings(
+                fiveHour: mask & 1 != 0, weekly: mask & 2 != 0, resetCards: mask & 4 != 0,
+                yesterdayTokens: mask & 8 != 0, totalTokens: mask & 16 != 0
+            )
+            let layout = codex.displayLayout
+            let rects = layout.quotaRects + layout.tokenRects
+            precondition(layout.quotaRects.count == (mask & 7).nonzeroBitCount)
+            precondition(layout.tokenRects.count == (mask & 24).nonzeroBitCount)
+            for (index, rect) in rects.enumerated() {
+                precondition(rect.minX >= 75 && rect.maxX <= 695 && rect.minY >= 0 && rect.maxY <= 30)
+                for other in rects.dropFirst(index + 1) {
+                    precondition(!rect.intersects(other), "overlapping rows for mask \(mask)")
+                }
+            }
+            // Each quota row reserves 195 px for label/value/date/gaps; the bar remains positive.
+            precondition(layout.quotaRects.allSatisfy { $0.width >= 215 })
+            try render(codex, to: directory.appendingPathComponent("display-\(mask).png"))
+        }
+        codex.displaySettings = DisplaySettings(weekly: true, resetCards: false, yesterdayTokens: false, totalTokens: false)
+        original.secondary = nil
+        codex.snapshot = original
+        try render(codex, to: directory.appendingPathComponent("weekly-missing.png"))
+        print("32 display combinations: PASS; all rows within bounds with no overlap")
         let zcode = ZCodeTouchBarView(frame: codex.frame)
         var z = ZCodeUsageSnapshot.placeholder
         z.provider = .go

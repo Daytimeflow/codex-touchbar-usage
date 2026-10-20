@@ -9,6 +9,7 @@ swiftc -target "${TARGET}" -parse-as-library -emit-library -static -emit-module 
   -module-name CodexTouchBarCore \
   "${PACKAGE}/Sources/CodexTouchBarCore/Models.swift" \
   "${PACKAGE}/Sources/CodexTouchBarCore/Formatting.swift" \
+  "${PACKAGE}/Sources/CodexTouchBarCore/DisplayConfiguration.swift" \
   "${PACKAGE}/Sources/CodexTouchBarCore/ZCodeModels.swift" \
   -emit-module-path "${BUILD}/CodexTouchBarCore.swiftmodule" -o "${BUILD}/libCodexTouchBarCore.a"
 swiftc -target "${TARGET}" -I "${BUILD}" -L "${BUILD}" -lCodexTouchBarCore \

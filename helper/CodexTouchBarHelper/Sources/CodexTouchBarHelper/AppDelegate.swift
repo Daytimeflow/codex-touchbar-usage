@@ -36,13 +36,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastRemoteSuccess: [ForegroundTarget: Date] = [:]
     private var resetDeadline: Date?
     private var lastFailure: String?
+    private let displayConfigurationURL: URL
+    private var lastDisplayConfigurationFailure: String?
 
     init(configuration: UsageStoreConfiguration) {
         codexLoader = CodexUsageLoader(configuration: configuration)
+        displayConfigurationURL = DisplayConfiguration.fileURL(codexHome: configuration.codexHome)
         super.init()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        reloadDisplayConfiguration()
         UserDefaults.standard.set(false, forKey: "DFRSystemModalShowsCloseBox")
         frontmostMonitor = FrontmostAppMonitor(targetNames: targetApplicationNames()) { [weak self] target in
             self?.handleTargetChange(target)
@@ -74,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleTargetChange(_ next: ForegroundTarget) {
         guard target != next else { return }
+        if next == .codex { reloadDisplayConfiguration() }
         stopRefresh()
         generation += 1
         target = next
@@ -137,6 +142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshLocal() {
+        if target == .codex { reloadDisplayConfiguration() }
         let requestedTarget = target
         let expected = generation
         guard requestedTarget != .none, localTasks[requestedTarget] == nil else { return }
@@ -246,5 +252,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func targetApplicationNames() -> Set<String> {
         let raw = ProcessInfo.processInfo.environment["CODEX_TOUCHBAR_TARGET_APPS"] ?? "Codex,ChatGPT,com.openai.codex"
         return Set(raw.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+    }
+
+    private func reloadDisplayConfiguration() {
+        do {
+            let configuration = try DisplayConfiguration.load(from: displayConfigurationURL)
+            touchBarController.updateDisplaySettings(configuration.display)
+            lastDisplayConfigurationFailure = nil
+        } catch {
+            let message = String(describing: error)
+            if message != lastDisplayConfigurationFailure {
+                NSLog("CodexTouchBarHelper: invalid display configuration at %@; keeping last valid settings: %@",
+                      displayConfigurationURL.path, message)
+                lastDisplayConfigurationFailure = message
+            }
+        }
     }
 }

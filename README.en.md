@@ -126,6 +126,42 @@ The installer will:
 
 Open Codex and focus its window. The Touch Bar usage panel should appear.
 
+## Customize the Touch Bar Display
+
+Independently choose the primary quota (usually five hours), weekly quota, reset cards, yesterday tokens, and total tokens. Install a helper built with this change first; older releases do not support these settings.
+
+Edit `~/.codex/touchbar-usage/config.json` (create the directory if needed). If `CODEX_HOME` is set for the helper, use `$CODEX_HOME/touchbar-usage/config.json` instead. The format is JSON and requires no YAML dependency. For example, show only primary and weekly quotas:
+
+```json
+{
+  "display": {
+    "five_hour": true,
+    "weekly": true,
+    "reset_cards": false,
+    "yesterday_tokens": false,
+    "total_tokens": false
+  }
+}
+```
+
+| Setting | Default | Content |
+| --- | --- | --- |
+| `five_hour` | `true` | Primary quota, labeled with its actual window duration (usually five hours) |
+| `weekly` | `false` | Seven-day quota, identified by `windowMinutes == 10080`; other quotas such as Spark are not treated as weekly |
+| `reset_cards` | `true` | Available reset cards and earliest expiry |
+| `yesterday_tokens` | `true` | Yesterday's tokens |
+| `total_tokens` | `true` | Cumulative tokens |
+
+Omitted switches retain their defaults; deleting the file restores the original layout. Setting all five to `false` leaves the Codex title and status indicator. Enabled quota rows are packed into columns of at most two rows, with bars sized to fit. Hiding tokens releases that space for quotas. A weekly primary is shown only once. If the account does not report a weekly window, its row shows `1周 --%` and an unknown reset time rather than an estimated value.
+
+Changes reload within about three seconds while Codex is frontmost, or the next time you switch to Codex. No rebuild or restart is needed. These settings affect only the Codex panel. Malformed JSON, unknown fields, and non-boolean values are logged to the helper's error log; the last valid settings remain active (the original defaults are used at startup).
+
+Validate the file and print settings with defaults applied, without requesting account data. Invalid configuration exits with code 2:
+
+```bash
+~/Applications/CodexTouchBarHelper.app/Contents/MacOS/CodexTouchBarHelper --print-display-config
+```
+
 ## Manual Start
 
 If you do not see the Touch Bar panel after a reboot, start it manually once:
@@ -323,6 +359,15 @@ swift test
 ```
 
 If the machine only has Command Line Tools and SwiftPM is unavailable, the build script automatically falls back to direct `swiftc` compilation.
+
+Display configuration and native layout can also be verified without SwiftPM:
+
+```bash
+./scripts/test_display_config.sh
+./scripts/test_touchbar_ui.sh /tmp/codex-touchbar-preview
+```
+
+These check configuration parsing, file changes, weekly selection, all 32 switch combinations, and native rendering bounds. The UI harness writes PNG previews for inspection.
 
 ## Roadmap
 

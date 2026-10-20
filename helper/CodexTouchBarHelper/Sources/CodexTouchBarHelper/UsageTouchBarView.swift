@@ -15,6 +15,18 @@ final class UsageTouchBarView: NSView {
         }
     }
 
+    var displaySettings = DisplaySettings() {
+        didSet { needsDisplay = true }
+    }
+
+    var displayLayout: UsageDisplayLayout {
+        let current = snapshot ?? .placeholder
+        return UsageDisplayLayout(
+            quotaCount: displaySettings.quotaRows(for: current).count,
+            tokenCount: displaySettings.tokenRows(for: current).count
+        )
+    }
+
     override var isFlipped: Bool { true }
     override var intrinsicContentSize: NSSize { NSSize(width: 720, height: 30) }
 
@@ -53,69 +65,15 @@ final class UsageTouchBarView: NSView {
         dirtyRect.fill()
 
         let snapshot = snapshot ?? .placeholder
-        let row1Y: CGFloat = 0.0
-        let row2Y: CGFloat = 15.0
-        let textHeight: CGFloat = 15.0
-
         drawText("Codex", in: NSRect(x: 8, y: 7.0, width: 60, height: 17), font: codexFont, color: white, alignment: .left)
 
-        drawText(UsageFormatting.windowLabel(snapshot.primary), in: NSRect(x: 75, y: row1Y, width: 43, height: textHeight), font: labelFont, color: white, alignment: .left)
-        drawText("重置卡", in: NSRect(x: 75, y: row2Y, width: 43, height: textHeight), font: labelFont, color: white, alignment: .left)
-
-        let barX: CGFloat = 124
-        drawSegmentedBar(
-            x: barX,
-            y: row1Y + 4.5,
-            usedPercent: snapshot.primary?.usedPercent,
-            segments: 10,
-            segmentWidth: 21,
-            segmentHeight: 7.8,
-            gap: 5.2
-        )
-        drawResetCreditTickets(
-            x: barX,
-            y: row2Y + 4.5,
-            availableCount: snapshot.resetCreditsAvailable,
-            expiresAt: snapshot.resetCreditsExpiresAt
-        )
-
-        let percentX: CGFloat = 396
-        let dateX: CGFloat = 454
-        let tokenX: CGFloat = 552
-
-        drawText(
-            UsageFormatting.balanceLabel(usedPercent: snapshot.primary?.usedPercent),
-            in: NSRect(x: percentX, y: row1Y, width: 42, height: textHeight),
-            font: valueFont,
-            color: white,
-            alignment: .right
-        )
-        drawText(
-            UsageFormatting.resetCreditCountLabel(snapshot.resetCreditsAvailable),
-            in: NSRect(x: percentX, y: row2Y, width: 42, height: textHeight),
-            font: valueFont,
-            color: snapshot.resetCreditsAvailable == 0 ? muted : white,
-            alignment: .right
-        )
-
-        drawText(
-            UsageFormatting.resetLabel(snapshot.primary?.resetsAt),
-            in: NSRect(x: dateX, y: row1Y, width: 82, height: textHeight),
-            font: smallMonoFont,
-            color: muted,
-            alignment: .left
-        )
-        drawText(
-            UsageFormatting.resetLabel(snapshot.resetCreditsExpiresAt),
-            in: NSRect(x: dateX, y: row2Y, width: 82, height: textHeight),
-            font: smallMonoFont,
-            color: muted,
-            alignment: .left
-        )
-
-        let rows = UsageFormatting.tokenRows(snapshot)
-        drawText(rows.0, in: NSRect(x: tokenX, y: row1Y, width: 150, height: textHeight), font: tokenFont, color: white, alignment: .left)
-        drawText(rows.1, in: NSRect(x: tokenX, y: row2Y, width: 150, height: textHeight), font: tokenFont, color: white, alignment: .left)
+        let layout = displayLayout
+        for (row, rect) in zip(displaySettings.quotaRows(for: snapshot), layout.quotaRects) {
+            drawQuotaRow(row, snapshot: snapshot, in: rect)
+        }
+        for (text, rect) in zip(displaySettings.tokenRows(for: snapshot), layout.tokenRects) {
+            drawText(text, in: rect, font: tokenFont, color: white, alignment: .left)
+        }
 
         if snapshot.source == "placeholder" {
             drawActivityDots()
@@ -124,15 +82,58 @@ final class UsageTouchBarView: NSView {
         }
     }
 
+    private func drawQuotaRow(_ row: QuotaDisplayRow, snapshot: UsageSnapshot, in rect: NSRect) {
+        let label: String
+        let value: String
+        let reset: Int?
+        let usedPercent: Double?
+        let isResetCard: Bool
+        switch row {
+        case .window(let window):
+            label = UsageFormatting.windowLabel(window)
+            value = UsageFormatting.balanceLabel(usedPercent: window?.usedPercent)
+            reset = window?.resetsAt
+            usedPercent = window?.usedPercent
+            isResetCard = false
+        case .resetCards:
+            label = "重置卡"
+            value = UsageFormatting.resetCreditCountLabel(snapshot.resetCreditsAvailable)
+            reset = snapshot.resetCreditsExpiresAt
+            usedPercent = nil
+            isResetCard = true
+        }
+
+        let dateX = rect.maxX - 82
+        let valueX = dateX - 54
+        let barX = rect.minX + 49
+        let barWidth = valueX - barX - 10
+        drawText(label, in: NSRect(x: rect.minX, y: rect.minY, width: 43, height: 15), font: labelFont, color: white, alignment: .left)
+        if isResetCard {
+            drawResetCreditTickets(x: barX, y: rect.minY + 4.5, width: barWidth,
+                                   availableCount: snapshot.resetCreditsAvailable, expiresAt: reset)
+        } else {
+            let segments = max(1, min(10, Int((barWidth + 5.2) / 16)))
+            let gap: CGFloat = segments > 3 ? 5.2 : 3
+            drawSegmentedBar(x: barX, y: rect.minY + 4.5, usedPercent: usedPercent,
+                             segments: segments, segmentWidth: (barWidth - CGFloat(segments - 1) * gap) / CGFloat(segments),
+                             segmentHeight: 7.8, gap: gap)
+        }
+        drawText(value, in: NSRect(x: valueX, y: rect.minY, width: 42, height: 15), font: valueFont,
+                 color: isResetCard && snapshot.resetCreditsAvailable == 0 ? muted : white, alignment: .right)
+        drawText(UsageFormatting.resetLabel(reset), in: NSRect(x: dateX, y: rect.minY, width: 82, height: 15),
+                 font: smallMonoFont, color: muted, alignment: .left)
+    }
+
     private func drawResetCreditTickets(
         x: CGFloat,
         y: CGFloat,
+        width: CGFloat,
         availableCount: Int?,
         expiresAt: Int?
     ) {
         let count = max(0, availableCount ?? 0)
-        let visibleCount = min(count, 7)
-        let ticketWidth: CGFloat = 28
+        let ticketWidth: CGFloat = min(28, width)
+        let visibleCount = min(count, 7, max(1, Int((width + 5.5) / (ticketWidth + 5.5))))
         let ticketHeight: CGFloat = 7.8
         let gap: CGFloat = 5.5
         let color = resetCreditColor(availableCount: availableCount, expiresAt: expiresAt)
@@ -174,7 +175,7 @@ final class UsageTouchBarView: NSView {
             ).fill()
         }
 
-        if count > visibleCount {
+        if count > visibleCount, width >= CGFloat(visibleCount) * (ticketWidth + gap) - gap + 16 {
             let plusX = x + CGFloat(visibleCount) * (ticketWidth + gap) - gap + 4
             drawText(
                 "+",
@@ -293,5 +294,29 @@ final class UsageTouchBarView: NSView {
     private func drawErrorDot() {
         danger.setFill()
         NSBezierPath(ovalIn: NSRect(x: 706, y: 11.5, width: 4.5, height: 4.5)).fill()
+    }
+}
+
+/// Two rows per quota column, with a token column allocated only when enabled.
+struct UsageDisplayLayout {
+    let quotaRects: [NSRect]
+    let tokenRects: [NSRect]
+
+    init(quotaCount: Int, tokenCount: Int) {
+        let left: CGFloat = 75
+        let right: CGFloat = 695 // Leave room for the existing status indicator.
+        let gap: CGFloat = 14
+        let tokenWidth: CGFloat = 150
+        let columns = (quotaCount + 1) / 2
+        let quotaRight = tokenCount > 0 ? right - tokenWidth - gap : right
+        let columnWidth = columns > 0 ? (quotaRight - left - CGFloat(columns - 1) * gap) / CGFloat(columns) : 0
+        quotaRects = (0..<quotaCount).map { index in
+            NSRect(x: left + CGFloat(index / 2) * (columnWidth + gap), y: CGFloat(index % 2) * 15,
+                   width: columnWidth, height: 15)
+        }
+        tokenRects = (0..<tokenCount).map { index in
+            NSRect(x: columns > 0 ? right - tokenWidth : left, y: CGFloat(index) * 15,
+                   width: columns > 0 ? tokenWidth : right - left, height: 15)
+        }
     }
 }

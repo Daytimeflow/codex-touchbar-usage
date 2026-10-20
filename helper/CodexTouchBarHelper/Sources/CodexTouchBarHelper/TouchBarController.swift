@@ -128,6 +128,11 @@ final class TouchBarController: NSObject, NSTouchBarDelegate {
         }
     }
 
+    func updateDisplaySettings(_ settings: DisplaySettings) {
+        guard usageView.displaySettings != settings else { return }
+        usageView.displaySettings = settings
+    }
+
     func update(_ snapshot: ZCodeUsageSnapshot) {
         var previous = zcodeView.snapshot
         previous.fetchedAt = snapshot.fetchedAt

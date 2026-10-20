@@ -5,6 +5,20 @@ import Foundation
 let arguments = Set(CommandLine.arguments.dropFirst())
 let configuration = UsageStoreConfiguration()
 
+if arguments.contains("--print-display-config") {
+    do {
+        let display = try DisplayConfiguration.load(from: DisplayConfiguration.fileURL(codexHome: configuration.codexHome))
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        FileHandle.standardOutput.write(try encoder.encode(display))
+        FileHandle.standardOutput.write(Data("\n".utf8))
+        exit(0)
+    } catch {
+        fputs("CodexTouchBarHelper: invalid display configuration: \(error)\n", stderr)
+        exit(2)
+    }
+}
+
 if arguments.contains("--zcode-once-json") {
     let store = ZCodeUsageStore()
     _ = await store.refreshLocal()

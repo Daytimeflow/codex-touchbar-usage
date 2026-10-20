@@ -126,6 +126,42 @@ cd codex-touchbar-usage
 
 打开 Codex 并让它成为前台窗口，Touch Bar 就会显示用量面板。
 
+## 自定义 Touch Bar 显示
+
+可独立选择主额度（通常为 5 小时）、周额度、重置卡、昨日 token 和累计 token。此功能需要安装包含本改动的 helper；旧版安装包不支持这些配置。
+
+编辑 `~/.codex/touchbar-usage/config.json`（目录不存在时先创建）。如果为 helper 设置了 `CODEX_HOME`，则使用 `$CODEX_HOME/touchbar-usage/config.json`。使用 JSON，无需 YAML 依赖。例如只显示主额度与周额度：
+
+```json
+{
+  "display": {
+    "five_hour": true,
+    "weekly": true,
+    "reset_cards": false,
+    "yesterday_tokens": false,
+    "total_tokens": false
+  }
+}
+```
+
+| 配置项 | 默认值 | 显示内容 |
+| --- | --- | --- |
+| `five_hour` | `true` | 主额度；按接口返回的实际窗口时长显示标签，通常为 5 小时 |
+| `weekly` | `false` | 7 天周额度；按 `windowMinutes == 10080` 识别，不将 Spark 等其他额度当成周额度 |
+| `reset_cards` | `true` | 可用重置卡张数和最早到期时间 |
+| `yesterday_tokens` | `true` | 昨日 token |
+| `total_tokens` | `true` | 累计 token |
+
+未填写的开关沿用默认值；删除配置文件恢复原布局。全部设为 `false` 时只显示 Codex 标识与状态指示。启用的额度按每列最多两行排列，进度条宽度自动调整；隐藏 token 后额度会占用释放的空间。主额度本身就是周额度时只显示一次。账号未返回周额度时显示 `1周 --%` 和未知重置时间，不会推算或伪造数值。
+
+保存后，在 Codex 位于前台时约 3 秒内自动生效；也会在下次切回 Codex 时重载，无需重新编译或重启。配置只影响 Codex 面板，ZCode 面板不变。格式错误、未知字段、非布尔值会记录到 helper 错误日志，并保留上一次有效配置（启动时默认使用原布局）。
+
+可在不请求账户数据的情况下校验配置并查看合并默认值后的设置；错误时退出码为 2：
+
+```bash
+~/Applications/CodexTouchBarHelper.app/Contents/MacOS/CodexTouchBarHelper --print-display-config
+```
+
 ## 手动启动
 
 如果重启后没有看到 Touch Bar 面板，先手动启动一次：
@@ -322,7 +358,14 @@ cd helper/CodexTouchBarHelper
 swift test
 ```
 
-如果当前机器只有 Command Line Tools 且 SwiftPM 不可用，构建脚本会自动 fallback 到直接 `swiftc` 编译。
+如果当前机器只有 Command Line Tools 且 SwiftPM 不可用，构建脚本会自动 fallback 到直接 `swiftc` 编译。配置与布局也可独立验证：
+
+```bash
+./scripts/test_display_config.sh
+./scripts/test_touchbar_ui.sh /tmp/codex-touchbar-preview
+```
+
+前者覆盖配置解析、文件变更、周额度识别和全部 32 种开关组合；后者检查原生绘制与布局边界，并输出 PNG 供检查。
 
 ## 路线图
 
